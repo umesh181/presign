@@ -20,3 +20,8 @@ export interface Formatted {
   intent: string;
   fields: FormattedField[];
 }
+
+/** Placeholder until the ERC-7730 formatter is implemented: supports nothing yet. */
+export function formatWithDescriptor(_descriptor: unknown, _tx: { to: string; data?: string }): Formatted | null {
+  return null;
+}

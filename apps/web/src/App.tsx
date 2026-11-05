@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SendFlow } from "./SendFlow.tsx";
 
 // Four demo pages, all reading from Arkiv (see README "Demo").
 const PAGES = {
@@ -27,6 +28,7 @@ export function App() {
       </header>
       <section>
         <h2>{PAGES[page].title}</h2>
+        {page === "simulator" && <SendFlow />}
         <p className="todo">TODO: {PAGES[page].todo}</p>
       </section>
     </main>

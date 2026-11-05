@@ -2,7 +2,9 @@
  * presign.check(): the decision made right before signing.
  * Deterministic on purpose: no LLM, no guessing. Unknown data => "unknown"/"blocked".
  */
-import type { Hex } from "viem";
+import { formatEther, type Hex } from "viem";
+import { descriptorHash } from "./fingerprint.ts";
+import type { Formatted } from "./formatter.ts";
 
 export type Status = "trusted" | "blocked" | "unknown";
 
@@ -62,5 +64,72 @@ export async function checkDelegation(auths: Authorization[], deps: DelegateDeps
   };
 }
 
-// TODO(B): checkTransaction({ chainId, to, data }) — find descriptor on Arkiv, verify
-// descriptorHash (+ attestation), then format with ./formatter.ts.
+export interface TxInput {
+  chainId: number;
+  to: Hex;
+  value?: bigint;
+  data?: Hex;
+}
+
+export interface DescriptorRecord {
+  descriptorHash: Hex;
+  attested: boolean;
+  protocolOwner: string;
+  /** Resolved descriptor JSON from Arkiv (or Swarm). null if not loaded. */
+  descriptor: unknown | null;
+  entityKey?: Hex;
+}
+
+export interface TransactionDeps {
+  isContract(chainId: number, address: Hex): Promise<boolean>;
+  lookupDescriptor(chainId: number, address: Hex): Promise<DescriptorRecord | null>;
+  /** ERC-7730 formatter (./formatter.ts). Returns null if the function isn't supported. */
+  format(descriptor: unknown, tx: TxInput): Formatted | null;
+}
+
+/**
+ * Normal transaction check:
+ * plain ETH send -> readable as is; contract call -> needs a verified descriptor from Arkiv.
+ */
+export async function checkTransaction(tx: TxInput, deps: TransactionDeps): Promise<Result> {
+  const warnings: string[] = [];
+  const value = tx.value ?? 0n;
+  const hasData = !!tx.data && tx.data !== "0x";
+
+  if (!hasData) {
+    if (!(await deps.isContract(tx.chainId, tx.to))) {
+      return {
+        status: "trusted",
+        reason: `Send ${formatEther(value)} ETH to ${tx.to}`,
+        warnings,
+        details: { kind: "nativeTransfer" },
+      };
+    }
+    return { status: "unknown", reason: "Sends ETH to a contract with no call data", warnings };
+  }
+
+  const record = await deps.lookupDescriptor(tx.chainId, tx.to);
+  if (!record) {
+    return { status: "unknown", reason: "No verified translation for this contract. Be careful.", warnings, details: { to: tx.to } };
+  }
+  if (record.descriptor === null) {
+    return { status: "unknown", reason: "Verified translation exists but could not be loaded", warnings, details: { entityKey: record.entityKey } };
+  }
+
+  // Re-check the fingerprint client-side: never trust a stored hash blindly.
+  const recomputed = descriptorHash(record.descriptor);
+  if (recomputed.toLowerCase() !== record.descriptorHash.toLowerCase()) {
+    return { status: "blocked", reason: "Translation file tampered (fingerprint mismatch)", warnings, details: { expected: record.descriptorHash, recomputed } };
+  }
+
+  const formatted = deps.format(record.descriptor, tx);
+  if (!formatted) {
+    return { status: "unknown", reason: "Verified translation found, but this function is not supported yet", warnings, details: { entityKey: record.entityKey } };
+  }
+  return {
+    status: "trusted",
+    reason: formatted.intent,
+    warnings,
+    details: { fields: formatted.fields, protocol: record.protocolOwner, attested: record.attested, entityKey: record.entityKey },
+  };
+}

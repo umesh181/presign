@@ -21,3 +21,26 @@ button[aria-pressed="true"] {
 .todo {
   opacity: 0.7;
 }
+.flow {
+  display: grid;
+  gap: 10px;
+  max-width: 560px;
+}
+.flow label {
+  display: grid;
+  gap: 4px;
+}
+.flow input {
+  padding: 6px;
+  font-family: ui-monospace, monospace;
+}
+.verdict {
+  border: 2px solid;
+  border-radius: 8px;
+  padding: 12px;
+}
+.verdict.trusted { border-color: #2e7d32; }
+.verdict.blocked { border-color: #c62828; }
+.verdict.unknown { border-color: #ef6c00; }
+.error { color: #c62828; }
+code { word-break: break-all; }

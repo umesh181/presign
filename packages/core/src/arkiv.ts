@@ -4,7 +4,11 @@
  */
 import { createPublicClient } from "@arkiv-network/sdk";
 import { rabdi } from "@arkiv-network/sdk/chains";
-import { http } from "viem";
+import { and, eq } from "@arkiv-network/sdk/query";
+import { addr, u64 } from "@arkiv-network/sdk/schema";
+import { hexToString, http, type Hex } from "viem";
+import type { DescriptorRecord } from "./check.ts";
+import { Delegate, Descriptor } from "./schemas.ts";
 
 export function createReader(accessKey: string) {
   // Rabdi = Arkiv's current testnet (chain 7794095). An empty key falls back to the
@@ -14,7 +18,46 @@ export function createReader(accessKey: string) {
 
 export type Reader = ReturnType<typeof createReader>;
 
-// TODO(B): findDescriptor(reader, publisher, chainId, address)
-//   select().from(Descriptor).where(and(eq("chainId", u64(chainId)), eq("address", addr(address)),
-//   eq("status", "active"))).createdBy(publisher).limit(1).fetch()
-// TODO(B): findDelegate(reader, publisher, chainId, address) — same pattern with Delegate.
+/**
+ * Find the active descriptor for (chainId, address).
+ * `createdBy(publisher)` is essential: the schema name is a tag anyone can forge,
+ * so we only trust entities our publisher wallet created.
+ */
+export async function findDescriptor(reader: Reader, publisher: Hex, chainId: number, address: Hex) {
+  const result = await reader
+    .select()
+    .from(Descriptor)
+    .where(and(eq("chainId", u64(chainId)), eq("address", addr(address)), eq("status", "active")))
+    .createdBy(publisher)
+    .limit(1)
+    .fetch();
+  return result.entities[0] ?? null;
+}
+
+/** Find the active trusted delegate for (chainId, address), created by our publisher. */
+export async function findDelegate(reader: Reader, publisher: Hex, chainId: number, address: Hex) {
+  const result = await reader
+    .select()
+    .from(Delegate)
+    .where(and(eq("chainId", u64(chainId)), eq("address", addr(address)), eq("status", "active")))
+    .createdBy(publisher)
+    .limit(1)
+    .fetch();
+  return result.entities[0] ?? null;
+}
+
+/** Adapts an Arkiv Descriptor row to the shape check() expects. */
+export function descriptorLookup(reader: Reader, publisher: Hex) {
+  return async (chainId: number, address: Hex): Promise<DescriptorRecord | null> => {
+    const row = await findDescriptor(reader, publisher, chainId, address);
+    if (!row) return null;
+    const raw = row.descriptor?.value;
+    return {
+      descriptorHash: row.descriptorHash.value as Hex,
+      attested: row.attested.value,
+      protocolOwner: row.protocolOwner.value,
+      descriptor: raw ? JSON.parse(hexToString(raw as Hex)) : null,
+      entityKey: row.$key,
+    };
+  };
+}
