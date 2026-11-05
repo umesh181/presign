@@ -2,7 +2,7 @@
  * "About to Sign" with a REAL wallet:
  * build tx -> PreSign check() against Arkiv -> verdict -> only then the MetaMask popup -> real Sepolia tx.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getAddress, isAddress, isHex, parseEther, type Hex, type WalletClient } from "viem";
 import {
   checkTransaction,
@@ -12,7 +12,7 @@ import {
   type Result,
   type TxInput,
 } from "@presign/core";
-import { CHAIN, EXPLORER, connectWallet, isContract } from "./wallet.ts";
+import { CHAIN, EXPLORER, connectWallet, ensureSepolia, isContract } from "./wallet.ts";
 
 const publisher = import.meta.env.VITE_PUBLISHER_ADDRESS as Hex | undefined;
 const reader = createReader(import.meta.env.VITE_ARKIV_ACCESS_KEY ?? "");
@@ -45,9 +45,16 @@ export function SendFlow() {
 
   const connect = () =>
     run(async () => {
-      const { wallet: client, account } = await connectWallet();
-      setWallet({ client, account });
+      const connected = await connectWallet();
+      if (connected) setWallet({ client: connected.wallet, account: connected.account });
     });
+
+  // On page load, silently reuse an existing MetaMask connection (no popup).
+  useEffect(() => {
+    connectWallet(true)
+      .then((c) => c && setWallet({ client: c.wallet, account: c.account }))
+      .catch(() => {});
+  }, []);
 
   const check = () =>
     run(async () => {
@@ -75,6 +82,7 @@ export function SendFlow() {
   const sign = () =>
     run(async () => {
       if (!wallet || !tx) return;
+      await ensureSepolia(wallet.client);
       const hash = await wallet.client.sendTransaction({
         account: wallet.account,
         chain: CHAIN,

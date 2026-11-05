@@ -2,7 +2,7 @@
  * Real wallet connection (MetaMask or any injected EIP-1193 wallet) on Sepolia.
  * PreSign runs BEFORE the wallet popup: a dApp or wallet would integrate it the same way.
  */
-import { createPublicClient, createWalletClient, custom, http, type EIP1193Provider, type Hex } from "viem";
+import { createPublicClient, createWalletClient, custom, http, type EIP1193Provider, type Hex, type WalletClient } from "viem";
 import { sepolia } from "viem/chains";
 
 declare global {
@@ -19,15 +19,45 @@ export const chainReader = createPublicClient({
   transport: http(import.meta.env.VITE_SEPOLIA_RPC_URL || undefined),
 });
 
-export async function connectWallet() {
+/** MetaMask error -32002: a connect popup is already open and unanswered. */
+function isPendingRequest(e: unknown): boolean {
+  const err = e as { code?: number; cause?: { code?: number }; message?: string };
+  return err?.code === -32002 || err?.cause?.code === -32002 || /already pending/i.test(err?.message ?? "");
+}
+
+/**
+ * Connect the wallet.
+ * silent=true: only reuse an existing connection (no popup), used on page load.
+ */
+export async function connectWallet(silent = false) {
   const provider = window.ethereum;
   if (!provider) throw new Error("No wallet found. Install MetaMask.");
   const wallet = createWalletClient({ chain: CHAIN, transport: custom(provider) });
-  const [account] = await wallet.requestAddresses();
+
+  // Already connected before? eth_accounts returns it without opening a popup.
+  let [account] = await wallet.getAddresses();
+  if (!account) {
+    if (silent) return null;
+    try {
+      [account] = await wallet.requestAddresses();
+    } catch (e) {
+      if (isPendingRequest(e)) {
+        throw new Error(
+          "MetaMask already has a connection request open. Click the MetaMask fox icon in your browser toolbar and approve it, then try again.",
+        );
+      }
+      throw e;
+    }
+  }
   if (!account) throw new Error("No account selected");
-  // Make sure the wallet is on Sepolia (adds nothing: Sepolia is built into MetaMask).
-  if ((await wallet.getChainId()) !== CHAIN.id) await wallet.switchChain({ id: CHAIN.id });
+  // On load (silent) don't pop up a network switch; ensureSepolia() runs before signing.
+  if (!silent) await ensureSepolia(wallet);
   return { wallet, account };
+}
+
+/** Make sure the wallet is on Sepolia (built into MetaMask, so no network needs adding). */
+export async function ensureSepolia(wallet: WalletClient) {
+  if ((await wallet.getChainId()) !== CHAIN.id) await wallet.switchChain({ id: CHAIN.id });
 }
 
 export async function isContract(address: Hex): Promise<boolean> {
