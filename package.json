@@ -1,0 +1,24 @@
+{
+  "name": "presign",
+  "private": true,
+  "description": "Verified pre-signing checks (ERC-7730 clear signing + EIP-7702 delegate allowlist), mirrored on Arkiv.",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "import:descriptors": "npm run descriptors -w @presign/importer",
+    "import:delegates": "npm run delegates -w @presign/importer",
+    "keeper": "npm run sync -w @presign/keeper",
+    "watchtower": "npm run scan -w @presign/watchtower",
+    "web": "npm run dev -w @presign/web"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

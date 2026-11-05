@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+.vite/
+coverage/
+# Local clones of source registries (re-fetched by the importer)
+.cache/

@@ -1,0 +1,11 @@
+{
+  "name": "@presign/importer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "descriptors": "tsx src/descriptors.ts",
+    "delegates": "tsx src/delegates.ts"
+  },
+  "dependencies": { "@presign/core": "*" }
+}

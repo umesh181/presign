@@ -1,0 +1,8 @@
+{
+  "name": "@presign/keeper",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "sync": "tsx src/sync.ts" },
+  "dependencies": { "@presign/core": "*" }
+}

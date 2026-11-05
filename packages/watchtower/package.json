@@ -1,0 +1,8 @@
+{
+  "name": "@presign/watchtower",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "scan": "tsx src/scan.ts" },
+  "dependencies": { "@presign/core": "*" }
+}

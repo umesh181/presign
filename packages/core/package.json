@@ -1,0 +1,16 @@
+{
+  "name": "@presign/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts"
+  },
+  "dependencies": {
+    "@arkiv-network/sdk": "^1.0.1",
+    "canonicalize": "^5.1.0",
+    "dotenv": "^18.0.9",
+    "viem": "^2.57.16"
+  }
+}

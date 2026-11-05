@@ -1,0 +1,16 @@
+{
+  "$comment": "Verified on Etherscan 2026-11-05. Read-only fixture: never broadcast.",
+  "source": "https://etherscan.io/tx/0xad99264d5532ae0dd04b2004eebda05f25657e70dacb764f7ac8d4ccd051298b",
+  "chainId": 1,
+  "txHash": "0xad99264d5532ae0dd04b2004eebda05f25657e70dacb764f7ac8d4ccd051298b",
+  "blockNumber": 26300753,
+  "timestamp": "2026-10-29T20:20:59Z",
+  "sender": "0x7C8601d4645b93cea45F71e118A729332e6B5CA0",
+  "authority": "0x28C6c06298d514Db089934071355E5743bf21d60",
+  "authorityLabel": "Binance 14",
+  "delegate": "0x63e842B054Bd624a465454D533C33F573e9c6fAe",
+  "authorizationCount": 50,
+  "nonceRange": [18914775, 18914824],
+  "validNonce": 18914809,
+  "authorizationList": "TODO: fetch with eth_getTransactionByHash and paste here"
+}
