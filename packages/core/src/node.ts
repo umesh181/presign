@@ -22,5 +22,6 @@ export function createPublisher() {
   if (!isHex(pk)) throw new Error("PUBLISHER_PRIVATE_KEY must be 0x-prefixed hex");
   const account = privateKeyToAccount(pk);
   const chain = rabdi({ accessKey: env("ARKIV_ACCESS_KEY") });
-  return createWalletClient({ chain, transport: http(), account });
+  // 60 s: batch transactions carry ~50–110 KB and can take longer than viem's 10 s default to submit.
+  return createWalletClient({ chain, transport: http(undefined, { timeout: 60_000 }), account });
 }

@@ -14,7 +14,8 @@ import { Delegate, Descriptor } from "./schemas.ts";
 export function createReader(accessKey: string) {
   // Rabdi = Arkiv's current testnet (chain 7794095). An empty key falls back to the
   // heavily rate-limited public RPC.
-  return createPublicClient({ chain: rabdi({ accessKey }), transport: http() });
+  // 30 s: viem's 10 s default is too short for Arkiv on a slow network.
+  return createPublicClient({ chain: rabdi({ accessKey }), transport: http(undefined, { timeout: 30_000 }) });
 }
 
 export type Reader = ReturnType<typeof createReader>;
