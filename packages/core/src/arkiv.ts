@@ -6,7 +6,8 @@ import { createPublicClient } from "@arkiv-network/sdk";
 import { rabdi } from "@arkiv-network/sdk/chains";
 import { and, eq } from "@arkiv-network/sdk/query";
 import { addr, u64 } from "@arkiv-network/sdk/schema";
-import { hexToString, http, type Hex } from "viem";
+import { hexToBytes, http, type Hex } from "viem";
+import { gunzip } from "./compress.ts";
 import type { DescriptorRecord } from "./check.ts";
 import { Delegate, Descriptor } from "./schemas.ts";
 
@@ -56,7 +57,8 @@ export function descriptorLookup(reader: Reader, publisher: Hex) {
       descriptorHash: row.descriptorHash.value as Hex,
       attested: row.attested.value,
       protocolOwner: row.protocolOwner.value,
-      descriptor: raw ? JSON.parse(hexToString(raw as Hex)) : null,
+      // Stored gzip-compressed (see core/src/compress.ts).
+      descriptor: raw ? JSON.parse(new TextDecoder().decode(await gunzip(hexToBytes(raw as Hex)))) : null,
       entityKey: row.$key,
     };
   };
