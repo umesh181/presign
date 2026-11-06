@@ -8,7 +8,7 @@ import { and, eq } from "@arkiv-network/sdk/query";
 import { addr, u64 } from "@arkiv-network/sdk/schema";
 import { hexToBytes, http, type Hex } from "viem";
 import { gunzip } from "./compress.ts";
-import type { DescriptorRecord } from "./check.ts";
+import type { DelegateRecord, DescriptorRecord } from "./check.ts";
 import { Delegate, Descriptor } from "./schemas.ts";
 
 export function createReader(accessKey: string) {
@@ -59,6 +59,20 @@ export function descriptorLookup(reader: Reader, publisher: Hex) {
       protocolOwner: row.protocolOwner.value,
       // Stored gzip-compressed (see core/src/compress.ts).
       descriptor: raw ? JSON.parse(new TextDecoder().decode(await gunzip(hexToBytes(raw as Hex)))) : null,
+      entityKey: row.$key,
+    };
+  };
+}
+
+/** Adapts an Arkiv Delegate row to the shape checkDelegation() expects. */
+export function delegateLookup(reader: Reader, publisher: Hex) {
+  return async (chainId: number, address: Hex): Promise<DelegateRecord | null> => {
+    const row = await findDelegate(reader, publisher, chainId, address);
+    if (!row) return null;
+    return {
+      vendor: row.vendor.value,
+      contractName: row.contractName.value,
+      codeHash: row.codeHash.value as Hex,
       entityKey: row.$key,
     };
   };
