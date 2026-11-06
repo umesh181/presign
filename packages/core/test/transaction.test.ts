@@ -10,7 +10,7 @@ function deps(record: DescriptorRecord | null): TransactionDeps {
   return {
     isContract: async (_c, a) => a === ROUTER,
     lookupDescriptor: async () => record,
-    format: () => ({ intent: "Swap", fields: [] }),
+    format: async () => ({ intent: "Swap", fields: [], warnings: [] }),
   };
 }
 

@@ -1,28 +1,32 @@
 /**
- * Smoke test: read a descriptor back from Arkiv exactly like the web app does
- * (query createdBy publisher -> gunzip -> recompute fingerprint -> check()).
- * Run: npm run smoke -w @presign/importer [-- 0xADDRESS [chainId]]
+ * End-to-end smoke test, same path as the web app:
+ * real mainnet Uniswap tx -> descriptor from Arkiv (createdBy publisher) -> gunzip ->
+ * fingerprint re-check -> ERC-7730 formatter -> token symbols read live from Ethereum mainnet.
+ * Run: npm run smoke -w @presign/importer
  */
 import { env } from "@presign/core/node";
-import { checkTransaction, createReader, descriptorHash, descriptorLookup } from "@presign/core";
-import type { Hex } from "viem";
+import { checkTransaction, createReader, descriptorLookup, erc20Lookup, formatCalldata, type FormattedField } from "@presign/core";
+import { createPublicClient, http, parseTransaction, type Hex, type PublicClient } from "viem";
+import { mainnet } from "viem/chains";
+import registryTests from "../../../fixtures/registry/calldata-UniswapV3SwapRouter.tests.json" with { type: "json" };
 
-const address = (process.argv[2] ?? "0xE592427A0AEce92De3Edee1F18E0157C05861564") as Hex;
-const chainId = Number(process.argv[3] ?? 1);
+const vector = registryTests.tests[0]!;
+const tx = parseTransaction(vector.rawTx as Hex);
+console.log(`Mainnet tx ${vector.txHash} (${vector.description})`);
 
 const lookup = descriptorLookup(createReader(env("ARKIV_ACCESS_KEY")), env("PUBLISHER_ADDRESS") as Hex);
-const rec = await lookup(chainId, address);
-if (!rec) {
-  console.log(`Not found on Arkiv: ${chainId}:${address}`);
-  process.exit(1);
-}
-console.log(`Found on Arkiv: ${rec.entityKey}`);
-console.log(`  owner: ${rec.protocolOwner}, attested: ${rec.attested}`);
-console.log(`  stored hash:     ${rec.descriptorHash}`);
-console.log(`  recomputed hash: ${descriptorHash(rec.descriptor)}`);
+const mainnetClient = createPublicClient({ chain: mainnet, transport: http(process.env.ETH_RPC_URL || undefined) });
+const tokens = erc20Lookup({ 1: mainnetClient as PublicClient });
 
 const result = await checkTransaction(
-  { chainId, to: address, data: "0x414bf389" },
-  { isContract: async () => true, lookupDescriptor: lookup, format: () => null },
+  { chainId: tx.chainId!, to: tx.to!, value: tx.value ?? 0n, data: tx.data! },
+  {
+    isContract: async () => true,
+    lookupDescriptor: lookup,
+    format: (descriptor, t) => formatCalldata(descriptor, { ...t, data: t.data! }, tokens),
+  },
 );
-console.log(`check(): ${result.status} - ${result.reason}`);
+console.log(`\ncheck(): ${result.status.toUpperCase()} - ${result.reason}`);
+for (const f of (result.details?.fields as FormattedField[] | undefined) ?? []) console.log(`  ${f.label}: ${f.value}`);
+console.log(`  protocol: ${result.details?.protocol}, attested: ${result.details?.attested}, entity: ${result.details?.entityKey}`);
+console.log(`\nRegistry expects: ${vector.expected.interpolatedIntent}`);

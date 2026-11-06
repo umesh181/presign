@@ -3,20 +3,29 @@
  * build tx -> PreSign check() against Arkiv -> verdict -> only then the MetaMask popup -> real Sepolia tx.
  */
 import { useEffect, useState } from "react";
-import { getAddress, isAddress, isHex, parseEther, type Hex, type WalletClient } from "viem";
+import { formatEther, getAddress, isAddress, isHex, parseEther, parseTransaction, type Hex, type PublicClient, type WalletClient } from "viem";
 import {
   checkTransaction,
   createReader,
   descriptorLookup,
-  formatWithDescriptor,
+  erc20Lookup,
+  formatCalldata,
+  type FormattedField,
   type Result,
   type TxInput,
 } from "@presign/core";
-import { CHAIN, EXPLORER, connectWallet, ensureSepolia, isContract } from "./wallet.ts";
+import registryTests from "../../../fixtures/registry/calldata-UniswapV3SwapRouter.tests.json";
+import { CHAIN, EXPLORER, chainReader, connectWallet, ensureSepolia, isContract, mainnetReader } from "./wallet.ts";
 
 const publisher = import.meta.env.VITE_PUBLISHER_ADDRESS as Hex | undefined;
 const reader = createReader(import.meta.env.VITE_ARKIV_ACCESS_KEY ?? "");
 const lookup = publisher ? descriptorLookup(reader, publisher) : async () => null;
+const tokens = erc20Lookup({ 1: mainnetReader as PublicClient, [CHAIN.id]: chainReader as PublicClient });
+
+// Real Ethereum mainnet Uniswap V3 swap, taken from the registry's own test vectors
+// (fixtures/registry). Check-only: we never sign or broadcast on mainnet.
+const uniswapTx = parseTransaction(registryTests.tests[0]!.rawTx as Hex);
+const UNISWAP_TX_HASH = registryTests.tests[0]!.txHash!;
 
 const ICON = { trusted: "✅", blocked: "🛑", unknown: "⚠️" } as const;
 
@@ -25,6 +34,9 @@ export function SendFlow() {
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("0.001");
   const [data, setData] = useState("");
+  // Sepolia unless a mainnet check-only scenario is loaded; editing any field returns to Sepolia.
+  const [chainId, setChainId] = useState<number>(CHAIN.id);
+  const checkOnly = chainId !== CHAIN.id;
   const [tx, setTx] = useState<TxInput | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [txHash, setTxHash] = useState<Hex | null>(null);
@@ -63,7 +75,7 @@ export function SendFlow() {
       if (!isAddress(to)) throw new Error("Recipient is not a valid address");
       if (data && !isHex(data)) throw new Error("Data must be 0x-prefixed hex");
       const input: TxInput = {
-        chainId: CHAIN.id,
+        chainId,
         to: getAddress(to),
         value: parseEther(amount || "0"),
         data: (data || undefined) as Hex | undefined,
@@ -73,10 +85,27 @@ export function SendFlow() {
         await checkTransaction(input, {
           isContract: (_c, a) => isContract(a),
           lookupDescriptor: lookup,
-          format: formatWithDescriptor,
+          format: (descriptor, t) => formatCalldata(descriptor, { ...t, data: t.data! }, tokens),
         }),
       );
     });
+
+  const loadUniswap = () => {
+    setTo(uniswapTx.to!);
+    setAmount(formatEther(uniswapTx.value ?? 0n));
+    setData(uniswapTx.data!);
+    setChainId(uniswapTx.chainId!);
+    setResult(null);
+    setTxHash(null);
+  };
+
+  // Manual edits always mean a Sepolia transaction again.
+  const edit = (set: (v: string) => void, v: string) => {
+    set(v);
+    setChainId(CHAIN.id);
+  };
+
+  const fields = (result?.details?.fields as FormattedField[] | undefined) ?? [];
 
   // Only reachable after a verdict. Blocked => no button at all.
   const sign = () =>
@@ -101,10 +130,20 @@ export function SendFlow() {
         <p>Connected: <code>{wallet.account}</code> on {CHAIN.name}</p>
       )}
 
-      <label>To <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x…" /></label>
-      <label>Amount (ETH) <input value={amount} onChange={(e) => setAmount(e.target.value)} /></label>
-      <label>Data (optional, for contract calls) <input value={data} onChange={(e) => setData(e.target.value)} placeholder="0x…" /></label>
-      <button onClick={check} disabled={busy || !wallet}>Check with PreSign</button>
+      <div>
+        <button onClick={loadUniswap} disabled={busy}>Scenario: Uniswap swap (Ethereum mainnet, check only)</button>
+      </div>
+      {checkOnly && (
+        <p className="todo">
+          Loaded real mainnet tx{" "}
+          <a href={`https://etherscan.io/tx/${UNISWAP_TX_HASH}`} target="_blank" rel="noreferrer">{UNISWAP_TX_HASH.slice(0, 12)}…</a>. Check only: not signed.
+        </p>
+      )}
+
+      <label>To <input value={to} onChange={(e) => edit(setTo, e.target.value)} placeholder="0x…" /></label>
+      <label>Amount (ETH) <input value={amount} onChange={(e) => edit(setAmount, e.target.value)} /></label>
+      <label>Data (optional, for contract calls) <input value={data} onChange={(e) => edit(setData, e.target.value)} placeholder="0x…" /></label>
+      <button onClick={check} disabled={busy || (!checkOnly && !wallet)}>Check with PreSign</button>
 
       {!publisher && <p className="todo">VITE_PUBLISHER_ADDRESS not set: contract calls will show "unknown" until data is on Arkiv.</p>}
 
@@ -112,9 +151,31 @@ export function SendFlow() {
         <div className={`verdict ${result.status}`}>
           <strong>{ICON[result.status]} {result.status.toUpperCase()}</strong>
           <p>{result.reason}</p>
+          {fields.length > 0 && (
+            <dl>
+              {fields.map((f) => (
+                <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>
+              ))}
+            </dl>
+          )}
+          {typeof result.details?.protocol === "string" && (
+            <p className="meta">
+              Protocol: {result.details.protocol} · Translation fingerprint verified ✅
+              {result.details.attested === true && " · Audited by Cyfrin ✅"}
+              {typeof result.details.entityKey === "string" && (
+                <> · <a href={`https://rabdi.explorer.arkiv.network/entity/${result.details.entityKey}`} target="_blank" rel="noreferrer">Arkiv entity ↗</a></>
+              )}
+            </p>
+          )}
           {result.warnings.map((w) => <p key={w}>⚠️ {w}</p>)}
-          {result.status === "trusted" && <button onClick={sign} disabled={busy}>Sign with MetaMask</button>}
-          {result.status === "unknown" && <button onClick={sign} disabled={busy}>Sign anyway (not verified)</button>}
+          {checkOnly ? (
+            <p>Check only (Ethereum mainnet): this demo never signs mainnet transactions.</p>
+          ) : (
+            <>
+              {result.status === "trusted" && <button onClick={sign} disabled={busy}>Sign with MetaMask</button>}
+              {result.status === "unknown" && <button onClick={sign} disabled={busy}>Sign anyway (not verified)</button>}
+            </>
+          )}
           {result.status === "blocked" && <p>Signing disabled.</p>}
         </div>
       )}

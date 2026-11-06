@@ -3,7 +3,7 @@
  * PreSign runs BEFORE the wallet popup: a dApp or wallet would integrate it the same way.
  */
 import { createPublicClient, createWalletClient, custom, http, type EIP1193Provider, type Hex, type WalletClient } from "viem";
-import { sepolia } from "viem/chains";
+import { mainnet, sepolia } from "viem/chains";
 
 declare global {
   interface Window {
@@ -29,6 +29,12 @@ function isPendingRequest(e: unknown): boolean {
  * Connect the wallet.
  * silent=true: only reuse an existing connection (no popup), used on page load.
  */
+/** Read-only Ethereum mainnet access, for check-only scenarios (token symbols/decimals). Never signs. */
+export const mainnetReader = createPublicClient({
+  chain: mainnet,
+  transport: http(import.meta.env.VITE_MAINNET_RPC_URL || undefined),
+});
+
 export async function connectWallet(silent = false) {
   const provider = window.ethereum;
   if (!provider) throw new Error("No wallet found. Install MetaMask.");

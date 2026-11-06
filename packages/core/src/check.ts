@@ -83,8 +83,8 @@ export interface DescriptorRecord {
 export interface TransactionDeps {
   isContract(chainId: number, address: Hex): Promise<boolean>;
   lookupDescriptor(chainId: number, address: Hex): Promise<DescriptorRecord | null>;
-  /** ERC-7730 formatter (./formatter.ts). Returns null if the function isn't supported. */
-  format(descriptor: unknown, tx: TxInput): Formatted | null;
+  /** ERC-7730 formatter (./formatter.ts). Resolves null if the function isn't supported. */
+  format(descriptor: unknown, tx: TxInput): Promise<Formatted | null>;
 }
 
 /**
@@ -122,13 +122,17 @@ export async function checkTransaction(tx: TxInput, deps: TransactionDeps): Prom
     return { status: "blocked", reason: "Translation file tampered (fingerprint mismatch)", warnings, details: { expected: record.descriptorHash, recomputed } };
   }
 
-  const formatted = deps.format(record.descriptor, tx);
+  const formatted = await deps.format(record.descriptor, tx);
   if (!formatted) {
     return { status: "unknown", reason: "Verified translation found, but this function is not supported yet", warnings, details: { entityKey: record.entityKey } };
   }
+  // ERC-7730 `mustMatch`: the wallet must raise an error when a value isn't allowed.
+  if (formatted.warnings.length) {
+    return { status: "blocked", reason: "Transaction violates its verified translation rules", warnings: [...warnings, ...formatted.warnings] };
+  }
   return {
     status: "trusted",
-    reason: formatted.intent,
+    reason: formatted.interpolatedIntent ?? formatted.intent,
     warnings,
     details: { fields: formatted.fields, protocol: record.protocolOwner, attested: record.attested, entityKey: record.entityKey },
   };
