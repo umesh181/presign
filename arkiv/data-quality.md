@@ -22,3 +22,15 @@ TODO:
   - `registry/walletconnect/calldata-wct.json`
 
   PreSign imports these with `attested = false`. Stale trust is exactly what we're built to catch.
+
+**EIP-7702 delegate allowlist** (`npm run import:delegates`, 2026-11-06): 41 entities, 6 vendors, 7 chains (1, 10, 56, 137, 8453, 42161, 11155111).
+
+- Each vendor's address is **proven present** in its official source file at the file's latest commit (GitHub API + raw file), not assumed.
+- **Stale source caught:** OKX changed its published `SmartWalletEntry` on 2026-10-09 (`okxlabs/okx-smart-wallet-evm@455dba8`). The importer refused our old address (`0xe40c…6fA4`) as "no longer listed"; after review we switched to the current `0xcEF0…4743`.
+- **Same contract across chains:** a chain is accepted only if its code equals mainnet's, or differs only in chain-specific immutables (same length, ≤64 differing bytes). MetaMask's and ZeroDev's delegators differ per chain in exactly 35 bytes: the chain id and the cached EIP-712 domain separator. Each chain stores its own exact `codeHash`, and `check()` compares live code against it.
+- OKX has no deployment on Sepolia, so it has 6 chains, not 7.
+
+## Known coverage gaps
+
+- **Uniswap Universal Router:** the EF registry has no descriptor for it at our pinned commit, and it's what app.uniswap.org uses today. PreSign correctly reports those swaps as `unknown` (no verified translation). Older Uniswap routers (V2Router02, V3 SwapRouter, SwapRouter02) are covered.
+- **EIP-712 descriptors** (133 files) are not mirrored yet. Only calldata descriptors are.

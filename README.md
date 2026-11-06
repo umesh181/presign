@@ -78,12 +78,26 @@ EOF
 
 It returns entity [`0x76028dc5…9572`](https://rabdi.explorer.arkiv.network/entity/0x76028dc5a3cb1ad09b0946f175a541e6f262c6903eb86ed667860dc8eb9d9572) with owner `Uniswap Labs`, its fingerprint, and the exact registry file and commit it came from. Add `"descriptor":true` to `attributes` to get the full descriptor JSON (gzip-compressed).
 
+**EIP-7702 trusted delegates:** **41** entities: 6 vendors (MetaMask, Coinbase, Uniswap, OKX, ZeroDev, Alchemy) across 7 chains, each with its per-chain code hash. Query them with `arkiv.schema = str('presign.delegate.v1') AND $creator = addr(0x1784A22855d5E482112F94d2169c28bC7e6aF885)`.
+
+### Signer Guard demo (real EIP-7702 transactions on Sepolia)
+
+```bash
+npm run guard:demo
+```
+
+1. Delegate the test wallet to MetaMask's official delegator → ✅ trusted → real type-4 tx on Sepolia
+2. Delegate to a contract deployed seconds ago (harmless, returns 42) → 🛑 refused, nothing signed
+3. The real Binance delegation (mainnet tx `0xad99…298b`, read-only, 50 authorizations) → 🛑 refused
+4. Revoke the delegation → ✅ trusted → wallet restored to a plain EOA
+
 ### Reproduce the import
 
 ```bash
 npm run verify:registry                  # fingerprints vs auditor attestations (166/169 match)
 npm run import:descriptors               # dry run: build + validate all entities
 npm run import:descriptors -- --write    # write to Arkiv; re-running writes nothing new
+npm run import:delegates -- --write      # vendor delegates (address proven in vendor file + per-chain code)
 ```
 
 ## Data sources and licenses

@@ -19,7 +19,8 @@
     "keeper": "npm run sync -w @presign/keeper --",
     "watchtower": "npm run scan -w @presign/watchtower --",
     "web": "npm run dev -w @presign/web",
-    "verify:registry": "npm run verify -w @presign/importer --"
+    "verify:registry": "npm run verify -w @presign/importer --",
+    "guard:demo": "npm run demo -w @presign/guard --"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

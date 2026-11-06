@@ -3,7 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "scripts": { "demo": "tsx src/demo.ts" },
-  "dependencies": { "@presign/core": "*" }
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "demo": "tsx src/demo.ts"
+  },
+  "dependencies": {
+    "@presign/core": "*",
+    "viem": "^2.57.16"
+  }
 }

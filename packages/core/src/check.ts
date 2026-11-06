@@ -43,7 +43,10 @@ export async function checkDelegation(auths: Authorization[], deps: DelegateDeps
   if (auths.length >= MANY_AUTHORIZATIONS)
     warnings.push(`${auths.length} authorizations in one transaction (nonce spraying pattern)`);
 
+  let first: DelegateRecord | null = null;
   for (const auth of auths) {
+    // Delegating to the zero address REVOKES a delegation (restores a plain wallet): always allowed.
+    if (/^0x0{40}$/i.test(auth.address)) continue;
     // TODO: decide which chain to verify for chainId 0 (currently mainnet).
     const chainId = auth.chainId === 0 ? 1 : auth.chainId;
     const record = await deps.lookupDelegate(chainId, auth.address);
@@ -54,13 +57,18 @@ export async function checkDelegation(auths: Authorization[], deps: DelegateDeps
     if (!live || live.toLowerCase() !== record.codeHash.toLowerCase()) {
       return { status: "blocked", reason: "Contract code differs from the trusted version", warnings, details: { expected: record.codeHash, live } };
     }
+    first ??= record;
   }
 
-  const first = auths[0] ? await deps.lookupDelegate(auths[0].chainId || 1, auths[0].address) : null;
   return {
     status: warnings.length ? "unknown" : "trusted",
-    reason: first ? `Upgrading your wallet with ${first.vendor}'s official contract (${first.contractName})` : "No authorizations",
+    reason: first
+      ? `Upgrading your wallet with ${first.vendor}'s official contract (${first.contractName})`
+      : auths.length
+        ? "Removes the delegation (restores a plain wallet)"
+        : "No authorizations",
     warnings,
+    details: first ? { vendor: first.vendor, contractName: first.contractName, entityKey: first.entityKey } : undefined,
   };
 }
 

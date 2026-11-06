@@ -30,6 +30,17 @@ describe("checkDelegation", () => {
     expect(result.warnings.join(" ")).toMatch(/50 authorizations/);
   });
 
+  it("allows revoking a delegation (zero address)", async () => {
+    const result = await checkDelegation([{ chainId: 1, address: "0x0000000000000000000000000000000000000000", nonce: 0 }], deps);
+    expect(result.status).toBe("trusted");
+    expect(result.reason).toMatch(/Removes the delegation/);
+  });
+
+  it("blocks when live code differs from the trusted code hash", async () => {
+    const result = await checkDelegation([{ chainId: 1, address: METAMASK, nonce: 0 }], { ...deps, currentCodeHash: async () => codeHash("0x6002") });
+    expect(result.status).toBe("blocked");
+  });
+
   it("trusts MetaMask's official delegator", async () => {
     const result = await checkDelegation([{ chainId: 1, address: METAMASK, nonce: 0 }], deps);
     expect(result.status).toBe("trusted");
