@@ -40,19 +40,36 @@ export const clients: Record<number, PublicClient> = Object.fromEntries(
   ]),
 );
 
+/**
+ * getCode is tiny, so ask every endpoint at once and take the first good answer: one slow or
+ * rate-limited public RPC (we measured 2-20 s) no longer holds up a verdict.
+ */
+const racers: Record<number, PublicClient[]> = Object.fromEntries(
+  Object.entries(RPCS).map(([id, urls]) => [
+    Number(id),
+    urls.filter((u): u is string => !!u).map((u) => createPublicClient({ transport: http(u, { timeout: 12_000, retryCount: 0 }) }) as PublicClient),
+  ]),
+);
+export const codeReaders = Object.fromEntries(
+  Object.entries(racers).map(([id, list]) => [
+    Number(id),
+    { getCode: (a: { address: Hex }) => Promise.any(list.map((c) => c.getCode(a))) },
+  ]),
+);
+
 const tokens = erc20Lookup(clients);
 const lookupDescriptor = descriptorLookup(reader, PUBLISHER);
 
 export const txDeps: TransactionDeps = {
   isContract: async (chainId, address) => {
-    const code = await clients[chainId]?.getCode({ address });
+    const code = await codeReaders[chainId]?.getCode({ address });
     return !!code && code !== "0x";
   },
   lookupDescriptor,
   format: (descriptor, t) => formatCalldata(descriptor, { ...t, data: t.data! }, tokens),
 };
 
-export const delegateDeps: DelegateDeps = delegateDepsFor(reader, PUBLISHER, clients);
+export const delegateDeps: DelegateDeps = delegateDepsFor(reader, PUBLISHER, codeReaders);
 
 export type Kind = "transaction" | "delegation";
 
@@ -175,7 +192,7 @@ export const SCENARIOS: Scenario[] = [
     run: async () => {
       // The real authorization list of the mainnet tx, saved in fixtures/binance-replay.json
       // (copied from eth_getTransactionByHash) so the demo never waits on a public RPC.
-      // The verdict itself is computed live against the delegate allowlist on Arkiv.
+      // The verdict itself is computed live from the evidence on Arkiv (vendor list + Radar).
       const auths = binance.authorizationList.map((a) => ({ chainId: a.chainId, address: a.address as Hex, nonce: a.nonce }));
       return {
         kind: "delegation",

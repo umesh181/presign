@@ -94,8 +94,8 @@ export function Explorer() {
             </div>
           </div>
           <div className="entry-body">
-            <div className="check fail"><span className="ic"><Cross /></span>No verified translation and not on any vendor allowlist on {CHAINS[searched.chainId] ?? `chain ${searched.chainId}`}.</div>
-            <div className="note">A signer using PreSign shows <b>unknown</b> for calls to this contract, and <b>blocks</b> EIP-7702 delegations to it.</div>
+            <div className="check fail"><span className="ic"><Cross /></span>No verified translation and not on any vendor list on {CHAINS[searched.chainId] ?? `chain ${searched.chainId}`}.</div>
+            <div className="note">A signer using PreSign shows <b>unknown</b> for calls to this contract. For an EIP-7702 delegation to it, PreSign decides from the Watchtower's evidence (known drainer code, upgradeable logic, alerts): see the <b>Radar</b> tab.</div>
           </div>
         </div>
       )}
@@ -104,7 +104,7 @@ export function Explorer() {
         <div key={e.key} className="card entry">
           <div className="entry-head">
             <div>
-              <span className="tag">{e.kind === "descriptor" ? "Clear-signing translation" : "Trusted EIP-7702 delegate"}</span>
+              <span className="tag">{e.kind === "descriptor" ? "Clear-signing translation" : "Vendor-listed EIP-7702 delegate"}</span>
               <h3>{e.kind === "descriptor" ? `${e.protocolOwner}${e.contractName ? ` · ${e.contractName}` : ""}` : `${e.vendor} · ${e.contractName}${e.version ? ` v${e.version}` : ""}`}</h3>
             </div>
             <a className="btn" href={`${ARKIV_EXPLORER}/entity/${e.key}`} target="_blank" rel="noreferrer">Arkiv entity <External /></a>

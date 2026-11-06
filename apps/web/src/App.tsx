@@ -79,7 +79,7 @@ export function App() {
             <div className="stat"><b>{fmt(stats?.descriptors)}</b><span>Clear-signing translations</span><small>EF registry · {fmt(stats?.attested)} audited by Cyfrin</small></div>
             <div className="stat"><b>{fmt(radar?.profiles)}</b><span>7702 delegates watched</span><small>evidence from the chain · {fmt(stats?.delegates)} vendor-listed</small></div>
             <div className="stat"><b>{fmt(radar?.families)}</b><span>Known drainer families</span><small>matched by code, not by address</small></div>
-            <div className="stat"><b>{fmt(radar?.alerts)}</b><span>Watchtower alerts</span><small>readonly on Arkiv · 7-day trust expiry</small></div>
+            <div className="stat"><b>{fmt(radar?.alerts)}</b><span>Watchtower alerts</span><small>readonly on Arkiv · can&apos;t be deleted</small></div>
           </div>
         </section>
 

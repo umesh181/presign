@@ -51,7 +51,9 @@ export function Radar() {
     setRun(null);
     setBusy(true);
     try {
-      const r = await fn();
+      // Never leave the page spinning if a public RPC or Arkiv hangs.
+      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("The network is slow right now: please try again.")), 25_000));
+      const r = await Promise.race([fn(), timeout]);
       if (r) setRun(r);
       else if (none) setInfo(none);
     } catch (e) {

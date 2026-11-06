@@ -7,7 +7,7 @@ import { u64 } from "@arkiv-network/sdk/schema";
 import { Alert, BadFamily, RadarProfile, checkDelegation } from "@presign/core";
 import { getAddress, type Hex } from "viem";
 import { PUBLISHER, reader } from "./arkiv.ts";
-import { clients, delegateDeps, type ScenarioRun } from "./scenarios.ts";
+import { codeReaders, delegateDeps, type ScenarioRun } from "./scenarios.ts";
 
 export const RADAR_CHAINS: Record<number, { name: string; explorer: string }> = {
   1: { name: "Ethereum", explorer: "https://etherscan.io" },
@@ -123,7 +123,7 @@ export async function checkDelegate(chainId: number, delegate: Hex): Promise<Sce
  * Returns the verdict on its CURRENT delegate, or null if it is a plain wallet.
  */
 export async function checkAccount(chainId: number, account: Hex): Promise<ScenarioRun | null> {
-  const code = await clients[chainId]!.getCode({ address: account });
+  const code = await codeReaders[chainId]!.getCode({ address: account });
   if (!code || !code.toLowerCase().startsWith("0xef0100")) return null;
   const delegate = getAddress(`0x${code.slice(8, 48)}`);
   const run = await checkDelegate(chainId, delegate);
