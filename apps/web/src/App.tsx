@@ -9,8 +9,9 @@ import { connectWallet } from "./wallet.ts";
 
 type Page = "check" | "radar" | "explorer";
 
-export function App() {
-  const [page, setPage] = useState<Page>("check");
+export function AppPage() {
+  // Deep links: #/app/radar, #/app/explorer
+  const [page, setPage] = useState<Page>(() => (location.hash.includes("radar") ? "radar" : location.hash.includes("explorer") ? "explorer" : "check"));
   const [stats, setStats] = useState<Stats | null>(null);
   const [radar, setRadar] = useState<RadarStats | null>(null);
   const [wallet, setWallet] = useState<Wallet>(null);
@@ -38,13 +39,13 @@ export function App() {
   const fmt = (n?: number) => (n === undefined ? "…" : n.toLocaleString("en-US"));
 
   return (
-    <>
+    <div className="app-shell">
       <header className="header">
         <div className="container">
-          <div className="brand">
+          <a className="brand" href="#/" title="Back to the PreSign homepage">
             <span className="brand-mark"><Shield size={18} /></span>
             PreSign
-          </div>
+          </a>
           <nav className="nav">
             <button aria-pressed={page === "check"} onClick={() => setPage("check")}>Check</button>
             <button aria-pressed={page === "radar"} onClick={() => setPage("radar")}>Radar</button>
@@ -97,6 +98,6 @@ export function App() {
           </span>
         </div>
       </footer>
-    </>
+    </div>
   );
 }
