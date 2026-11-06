@@ -13,7 +13,7 @@ Before anything is signed, `check()` answers *"what does this do?"* and *"who am
 
 ## Status
 
-🚧 Work in progress (hackathon build).
+Working on Arkiv's Rabdi testnet: **1,917** clear-signing descriptors and **41** EIP-7702 trusted delegates are live and kept fresh by the keeper. The checker, ERC-7730 formatter, Signer Guard (real Sepolia transactions) and web app all work. Hackathon build.
 
 ## Repo layout
 
@@ -126,7 +126,17 @@ No Sourcify data, APIs or CDNs are used.
 
 ## How AI was used
 
-TODO: describe which parts were written or assisted by AI tools (e.g. Claude Code) and how they were reviewed.
+We built PreSign with **Claude Code** (Anthropic, model Claude Opus 5.5) as a pair programmer. Commits it helped write carry a `Co-Authored-By: Claude` trailer.
+
+- **Research:** reading the Arkiv docs and SDK types, ERC-7730 / ERC-8176, the EF registry layout, vendor EIP-7702 repos, and verifying the Binance transaction on Etherscan. Facts the AI found were re-checked against primary sources: SDK `.d.ts` files, raw JSON-RPC calls, GitHub files at pinned commits.
+- **Code:** importers, keeper, `check()`, the ERC-7730 formatter, Signer Guard and the web app were written with AI assistance, with the team directing design decisions.
+- **How we kept it honest:**
+  - the formatter is tested against the registry's **own** expected outputs for 11 real mainnet transactions
+  - the keeper's change paths were exercised **live on Arkiv** with a throwaway publisher
+  - Signer Guard sent **real** Sepolia transactions
+  - every number in this README and in `arkiv/*.md` was re-measured (Arkiv count queries, GitHub API, explorer)
+- **Decisions are deterministic:** PreSign itself uses **no AI** at signing time. Every verdict comes from verified data and fixed rules.
+- **Planning:** a planning document (no code) was written before the event; all code in this repo was written during ETHGlobal Mumbai.
 
 ## License
 

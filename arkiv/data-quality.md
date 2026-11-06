@@ -2,12 +2,17 @@
 
 > Judged (25%). Complete, current, filterable the way people search?
 
-TODO:
-- Registry commit imported, counts (descriptors / deployments), coverage by chain.
-- Fingerprint method (ERC-8176: includes resolved -> JCS -> keccak256) and attestation match rate.
-- Delegate sources (sources/delegates.json), licenses, per-chain code verification, skipped chains.
-- Known conflicts (e.g. eth-infinitism Simple7702Account has two published addresses; excluded).
-- How the keeper keeps it fresh; how to filter (chainId + address).
+## Summary
+
+| Question | Answer |
+|---|---|
+| **Complete?** | All **1,917** calldata deployments in the EF registry's `index.calldata.json` (614 descriptor files, **143 chains**) at a pinned commit, `includes` resolved. Plus an EIP-7702 allowlist of **41** entries: 6 vendors × 7 chains (OKX isn't deployed on Sepolia). Not yet mirrored: EIP-712 descriptors (see gaps below) |
+| **Correct?** | Every descriptor carries its ERC-8176 fingerprint, which readers recompute client-side. **166/169** auditor attestations match (signer recovered = Cyfrin). Every delegate address is proven present in the vendor's own file, with each chain's exact code hash |
+| **Current?** | Every entity expires in 7 days. The keeper re-reads the sources (latest registry commit, vendor files, on-chain code), extends what still matches, and immediately marks changed or removed entries, with a `readonly` `Change` record. Last run: 2026-11-06, all 1,958 entities matched and were extended |
+| **Filterable the way people search?** | Signers look up "this contract on this chain": indexed `chainId` + `address` + `status` (+ `attested`, `vendor`, `codeHash`, `sourceCommit`), always pinned to `$creator = publisher`. One query, no API key (see README) |
+| **Provenance?** | Every entity stores source repo, path, commit and import time |
+
+**Excluded on purpose (see `sources/delegates.json` research):** Ambire's delegate (its repo has no license, so we can't republish); eth-infinitism `Simple7702Account` (two different addresses published in different places, so neither is trusted until they agree); vendors with no published address (Safe, Thirdweb, Porto, Pimlico, …).
 
 ## Verified so far
 
