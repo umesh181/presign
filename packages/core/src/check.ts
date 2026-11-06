@@ -144,7 +144,8 @@ async function inspect(chainId: number, address: Hex, deps: DelegateDeps): Promi
     const used = profile.accounts ? ` · ${profile.accounts} account${profile.accounts === 1 ? "" : "s"} seen delegating` : "";
     evidence.push({ state: age < 86400 && !vendor ? "warn" : "ok", text: `First seen by the Watchtower ${ago(age)} ago${used}` });
     details.radarKey = profile.entityKey;
-  } else if (deps.lookupProfile) {
+  } else if (deps.lookupProfile && !vendor) {
+    // Vendor-listed code is still verified above; missing Watchtower data shouldn't demote it.
     evidence.push({ state: "warn", text: "Never seen by the PreSign Watchtower" });
   }
 

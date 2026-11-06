@@ -91,6 +91,11 @@ describe("checkDelegation (Radar evidence)", () => {
     expect(fresh.warnings.join(" ")).toMatch(/First seen by the Watchtower 2 h ago/);
   });
 
+  it("keeps a vendor contract trusted when the Watchtower has no profile for it yet", async () => {
+    const r = await checkDelegation(one(VENDOR), deps({ lookupProfile: async () => null }));
+    expect(r.status).toBe("trusted");
+  });
+
   it("does not hold a vendor contract back just because the Watchtower profiled it recently", async () => {
     const r = await checkDelegation(one(VENDOR), deps({ lookupProfile: async () => ({ upgradeable: false, firstSeenAt: NOW - 60, accounts: 0, authorizations: 0 }) }));
     expect(r.status).toBe("trusted");
