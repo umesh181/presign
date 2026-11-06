@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "descriptors": "tsx src/descriptors.ts",
-    "delegates": "tsx src/delegates.ts"
+    "delegates": "tsx src/delegates.ts",
+    "verify": "tsx src/verify.ts"
   },
-  "dependencies": { "@presign/core": "*" }
+  "dependencies": {
+    "@presign/core": "*"
+  }
 }

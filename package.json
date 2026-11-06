@@ -4,8 +4,13 @@
   "description": "Verified pre-signing checks (ERC-7730 clear signing + EIP-7702 delegate allowlist), mirrored on Arkiv.",
   "license": "MIT",
   "type": "module",
-  "engines": { "node": ">=22" },
-  "workspaces": ["packages/*", "apps/*"],
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
@@ -13,7 +18,8 @@
     "import:delegates": "npm run delegates -w @presign/importer",
     "keeper": "npm run sync -w @presign/keeper",
     "watchtower": "npm run scan -w @presign/watchtower",
-    "web": "npm run dev -w @presign/web"
+    "web": "npm run dev -w @presign/web",
+    "verify:registry": "npm run verify -w @presign/importer"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
