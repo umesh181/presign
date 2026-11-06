@@ -1,8 +1,8 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import "./styles.css"; // first: the landing page's own CSS must be able to override shared rules
 import { AppPage } from "./App.tsx";
-import { Landing } from "./components/Landing.tsx";
-import "./styles.css";
+import { Landing } from "./landing/Landing.tsx";
 
 /** "#/app" = the app, anything else = the landing page. Hash routing works on any static host. */
 function Root() {
