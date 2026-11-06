@@ -40,7 +40,6 @@ export function AppPage() {
 
   return (
     <div className="app-shell">
-      <div className="grain" aria-hidden />
       <header className="header">
         <div className="container">
           <a className="brand" href="#/" title="Back to the PreSign homepage">
