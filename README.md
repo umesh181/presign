@@ -64,7 +64,7 @@ Get an Arkiv access key at https://hub.arkiv.network/access-keys and testnet tGL
 | ERC-7730 clear-signing descriptors | **1,917** (one per chainId + contract, 143 chains, 614 descriptor files) | EF registry @ `ef582c2f03bfbd062b7e3889b55dd3b45c3d5494` |
 | …of which attested by an auditor (Cyfrin, signature verified) | **201** | `registry/*/sigs/*.json` |
 
-### Run one query yourself (no API key, no PreSign server)
+### Run one query yourself (no PreSign server; key optional)
 
 Fetch the clear-signing descriptor for the Uniswap V3 SwapRouter on Ethereum, trusting only entities created by our publisher wallet:
 
@@ -75,6 +75,8 @@ curl -s https://rpc.rabdi.db-chain.testnet.arkiv.network --json @- <<'EOF'
   {"select":{"key":true,"expiresAt":true,"attributes":{"protocolOwner":true,"descriptorHash":true,"attested":true,"sourcePath":true,"sourceCommit":true}}}]}
 EOF
 ```
+
+Arkiv's public endpoint gives each IP a small anonymous query budget. If you see `ANON_COST_LIMITED`, add a free key from [hub.arkiv.network](https://hub.arkiv.network/access-keys): `curl -s -H "X-API-KEY: <key>" …`.
 
 It returns entity [`0x76028dc5…9572`](https://rabdi.explorer.arkiv.network/entity/0x76028dc5a3cb1ad09b0946f175a541e6f262c6903eb86ed667860dc8eb9d9572) with owner `Uniswap Labs`, its fingerprint, and the exact registry file and commit it came from. Add `"descriptor":true` to `attributes` to get the full descriptor JSON (gzip-compressed).
 

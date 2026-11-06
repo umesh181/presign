@@ -58,6 +58,13 @@ Everything below is something we hit or verified ourselves while building PreSig
 - **Repro:** `curl -s --json '{"jsonrpc":"2.0","id":1,"method":"eth_getProof","params":["0x4400000000000000000000000000000000000044",[],"latest"]}' https://rpc.rabdi.db-chain.testnet.arkiv.network` → `"the method eth_getProof does not exist/is not available"`.
 - **Impact:** a client can't verify an entity's `$creator` or contents without trusting the RPC node. For a security product we have to state this honestly ("trusted-node reads").
 
+### 10. Anonymous query budget runs out quickly
+- **Expected:** our README promise ("run this `curl`, no key needed") to hold for anyone trying it.
+- **Actual:** after a day of testing from one IP, keyless queries returned `{"error":"ANON_COST_LIMITED","message":"unauthenticated query budget exhausted; get an API key at https://hub.arkiv.network for a monthly quota"}`. The same command with `-H "X-API-KEY: <key>"` works.
+- **Repro:** run many keyless `arkiv_query` calls against `https://rpc.rabdi.db-chain.testnet.arkiv.network` from one IP.
+- **Impact:** a judge on a shared venue Wi-Fi can hit it. We now document the key header next to every copyable query. The error message is clear, which helped.
+- **Suggestion:** publish the anonymous budget (queries per hour per IP) on the access-keys page.
+
 ---
 
 ## What worked well
@@ -66,5 +73,5 @@ Everything below is something we hit or verified ourselves while building PreSig
 - **`createdBy(publisher)`** is exactly the primitive a trust list needs.
 - **`executeBatch` is atomic**, so each keeper change (create + retire + history) is all-or-nothing.
 - **`permissionlessExtension` + `readonly`** express "anyone may keep it alive, nobody may change it" with two flags.
-- **Raw JSON-RPC works without an access key**, so our README query is a plain `curl`.
+- **Raw JSON-RPC works without an access key** for a small anonymous budget, so our README query is a plain `curl`.
 - **Cheap:** 1,958 entities and all keeper runs cost under 0.5 tGLM.

@@ -8,7 +8,7 @@
 
 | Arkiv feature | How PreSign uses it | What breaks without it |
 |---|---|---|
-| **Public queries, no backend of ours** | Wallets, signers and judges query `arkiv_query` directly (README has a `curl` that needs no API key). The web app reads Arkiv straight from the browser | With Postgres, every reader depends on our API: we can go down, rate-limit, censor or quietly change answers |
+| **Public queries, no backend of ours** | Wallets, signers and judges query `arkiv_query` directly (README has a `curl`; a small anonymous quota works without a key, a free key from Arkiv Hub lifts it). The web app reads Arkiv straight from the browser | With Postgres, every reader depends on our API: we can go down, rate-limit, censor or quietly change answers |
 | **Provable author (`$creator`)** | Every read is pinned to `$creator = 0x1784…F885` (our publisher). The schema name is forgeable, the creator is not | A Postgres row says nothing about who wrote it; an admin (or attacker with DB access) can edit it silently |
 | **Built-in expiry** | Every descriptor and delegate expires in **7 days**. The keeper extends only entries whose source still matches | In Postgres, stale "trusted" rows live forever unless someone remembers to delete them. If the operator disappears, old trust persists. That is the dangerous failure mode |
 | **`permissionlessExtension`** | Anyone can keep entries alive if we stop running the keeper, but **nobody else can change their content** | A Postgres mirror dies with its operator, or must hand out write access |
