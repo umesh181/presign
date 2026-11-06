@@ -13,7 +13,7 @@ Before anything is signed, `check()` answers *"what does this do?"* and *"who am
 
 ## Status
 
-Working on Arkiv's Rabdi testnet: **1,917** clear-signing descriptors and **41** EIP-7702 trusted delegates are live and kept fresh by the keeper. The checker, ERC-7730 formatter, Signer Guard (real Sepolia transactions) and web app all work. Hackathon build.
+Working on Arkiv's Rabdi testnet: **1,917** clear-signing descriptors and **41** vendor-listed EIP-7702 delegates are live and kept fresh by the keeper. The **Delegation Radar** has published **107** delegate profiles (63 delegates seen on Ethereum mainnet in one hour, 1,976 authorizations; vendor delegates on 7 chains; Sepolia), **16** known drainer code families, and its first alerts, including a live mainnet delegate whose code is byte-for-byte the published CrimeEnjoyor v1 drainer (`0x84d05511…1f40`, not in the source list). The checker, ERC-7730 formatter, Signer Guard and the Radar demo all run real transactions on Sepolia. Hackathon build.
 
 ## Repo layout
 
