@@ -14,8 +14,10 @@
  * Run: npm run import:descriptors            (dry run: build + validate, no writes)
  *      npm run import:descriptors -- --write (writes to Arkiv; needs .env)
  */
-import "@presign/core/node"; // loads the repo-root .env
-import { descriptorHash, gzip, resolveDescriptor } from "@presign/core";
+import { createPublisher, env } from "@presign/core/node"; // also loads the repo-root .env
+import { Descriptor, createReader, descriptorHash, gzip, resolveDescriptor } from "@presign/core";
+import { ExpirationTime } from "@arkiv-network/sdk";
+import { addr, u64 } from "@arkiv-network/sdk/schema";
 import { getAddress, type Hex } from "viem";
 import { readAttestation } from "./attestations.ts";
 import { fetchRegistry, latestCommit } from "./registry.ts";
@@ -123,9 +125,109 @@ async function main() {
     console.log("\nDry run only. Re-run with --write once ARKIV_ACCESS_KEY + PUBLISHER_PRIVATE_KEY are set.");
     return;
   }
-  // TODO(Phase 2, step 7): executeBatch creates in chunks under the 2^24 gas cap,
-  // skip (chainId,address) already on Arkiv with the same hash, read back each entity.
-  throw new Error("--write not implemented yet (needs Arkiv setup from Phase 1)");
+
+  // Optional filters for the first end-to-end test: --limit N, --only 0xADDRESS
+  const arg = (name: string) => process.argv[process.argv.indexOf(name) + 1];
+  let todo = rows;
+  if (process.argv.includes("--only")) todo = todo.filter((r) => r.address.toLowerCase() === arg("--only")?.toLowerCase());
+  if (process.argv.includes("--limit")) todo = todo.slice(0, Number(arg("--limit")));
+  await writeRows(todo);
+}
+
+const keyOf = (chainId: number, address: string) => `${chainId}:${address.toLowerCase()}`;
+
+/** All active descriptors our publisher already wrote, keyed by chainId:address. */
+async function loadExisting(publisher: Hex) {
+  const reader = createReader(env("ARKIV_ACCESS_KEY"));
+  const existing = new Map<string, { key: Hex; hash: string }>();
+  for (let offset = 0; ; offset += 100) {
+    const page = await reader
+      .select({ $key: true, chainId: true, address: true, descriptorHash: true, status: true })
+      .from(Descriptor)
+      .createdBy(publisher)
+      .limit(100)
+      .offset(offset)
+      .fetch();
+    for (const e of page.entities) {
+      if (e.status.value !== "active") continue;
+      existing.set(keyOf(Number(e.chainId.value), e.address.value), { key: e.$key, hash: e.descriptorHash.value });
+    }
+    if (page.entities.length < 100) break;
+  }
+  return existing;
+}
+
+/**
+ * Write rows to Arkiv. Safe to re-run (that is how it resumes):
+ * - same (chainId, address) with the same hash  -> skip
+ * - same (chainId, address) with a new hash     -> create new, patch old status to "superseded"
+ * Batches stay well under the 2^24 gas cap per transaction.
+ */
+async function writeRows(rows: DescriptorRow[]) {
+  const wallet = createPublisher();
+  const publisher = wallet.account.address;
+  console.log(`\nPublisher: ${publisher}`);
+  const existing = await loadExisting(publisher);
+  console.log(`Already on Arkiv: ${existing.size}`);
+
+  const creates = rows.filter((r) => existing.get(keyOf(r.chainId, r.address))?.hash !== r.descriptorHash);
+  const supersede = creates.map((r) => existing.get(keyOf(r.chainId, r.address))?.key).filter((k): k is Hex => !!k);
+  console.log(`To create: ${creates.length}, to supersede: ${supersede.length}, unchanged: ${rows.length - creates.length}`);
+
+  const MAX_OPS = 20;
+  const MAX_PAYLOAD = 64 * 1024;
+  let written = 0;
+  let i = 0;
+  while (i < creates.length) {
+    // Fill one batch by op count and payload size.
+    const batch: DescriptorRow[] = [];
+    let payload = 0;
+    while (i < creates.length && batch.length < MAX_OPS && payload + creates[i]!.descriptor.length <= MAX_PAYLOAD) {
+      payload += creates[i]!.descriptor.length;
+      batch.push(creates[i++]!);
+    }
+    if (batch.length === 0) batch.push(creates[i++]!); // a single large row still goes alone
+
+    const result = await wallet.executeBatch({
+      creates: batch.map((r) => ({
+        schema: Descriptor,
+        values: {
+          chainId: u64(r.chainId),
+          address: addr(r.address),
+          descriptorHash: r.descriptorHash,
+          attested: r.attested,
+          status: r.status,
+          importedAt: u64(r.importedAt),
+          protocolOwner: r.protocolOwner,
+          sourceRepo: r.sourceRepo,
+          sourceCommit: r.sourceCommit,
+          sourcePath: r.sourcePath,
+          descriptor: r.descriptor,
+        },
+        // Trust expires unless the keeper re-confirms it. Anyone may extend (keep alive),
+        // nobody but us can change the content.
+        expiration: ExpirationTime.fromDays(7),
+        flags: { permissionlessExtension: true },
+      })),
+    });
+    written += result.createdEntities.length;
+    console.log(`  batch ok: +${result.createdEntities.length} (total ${written}/${creates.length}) tx ${result.txHash}`);
+  }
+
+  for (let j = 0; j < supersede.length; j += MAX_OPS) {
+    await wallet.executeBatch({
+      patches: supersede.slice(j, j + MAX_OPS).map((entityKey) => ({ schema: Descriptor, entityKey, set: { status: "superseded" } })),
+    });
+  }
+
+  // Read back: everything we intended must now be on Arkiv with the right hash.
+  const after = await loadExisting(publisher);
+  const missing = rows.filter((r) => after.get(keyOf(r.chainId, r.address))?.hash !== r.descriptorHash);
+  console.log(missing.length ? `❌ ${missing.length} rows not confirmed on Arkiv` : `✅ All ${rows.length} rows confirmed on Arkiv`);
+  if (rows[0]) {
+    const sample = after.get(keyOf(rows[0].chainId, rows[0].address));
+    if (sample) console.log(`Example entity: https://rabdi.explorer.arkiv.network/entity/${sample.key}`);
+  }
 }
 
 main().catch((err) => {
