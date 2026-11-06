@@ -4,13 +4,24 @@
  */
 import { checkTransaction, type Result, type TxInput } from "@presign/core";
 import { useState } from "react";
-import { getAddress, isAddress, isHex, parseEther, type Hex, type WalletClient } from "viem";
+import { encodeFunctionData, getAddress, isAddress, isHex, parseAbi, parseEther, type Hex, type WalletClient } from "viem";
 import { SCENARIOS, txDeps, type ScenarioRun } from "../lib/scenarios.ts";
 import { CHAIN, EXPLORER, ensureSepolia } from "../wallet.ts";
 import { External, Shield } from "./icons.tsx";
 import { Verdict } from "./Verdict.tsx";
 
 export type Wallet = { client: WalletClient; account: Hex } | null;
+
+/**
+ * Sepolia WETH: a real contract the EF clear-signing registry covers on Sepolia
+ * (registry/weth/calldata-weth.json), so PreSign can show plain English before MetaMask opens.
+ */
+const SEPOLIA_WETH = "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14";
+const WETH_ABI = parseAbi(["function deposit() payable", "function withdraw(uint256 wad)"]);
+const WETH_ACTIONS = {
+  wrap: { label: "Wrap 0.001 ETH → WETH", amount: "0.001", data: encodeFunctionData({ abi: WETH_ABI, functionName: "deposit" }) },
+  unwrap: { label: "Unwrap 0.001 WETH → ETH", amount: "0", data: encodeFunctionData({ abi: WETH_ABI, functionName: "withdraw", args: [parseEther("0.001")] }) },
+} as const;
 
 export function CheckPage({ wallet, onConnect }: { wallet: Wallet; onConnect: () => void }) {
   const [active, setActive] = useState<string | null>(null);
@@ -43,7 +54,8 @@ export function CheckPage({ wallet, onConnect }: { wallet: Wallet; onConnect: ()
     }
   }
 
-  const checkCustom = () => {
+  /** Check explicit values (React state may not be updated yet when a WETH button fills the form). */
+  const checkTx = (to: string, amount: string, data: string) => {
     if (!isAddress(to)) return setError("Recipient is not a valid address");
     if (data && !isHex(data)) return setError("Data must be 0x-prefixed hex");
     const input: TxInput = { chainId: CHAIN.id, to: getAddress(to), value: parseEther(amount || "0"), data: (data || undefined) as Hex | undefined };
@@ -58,6 +70,17 @@ export function CheckPage({ wallet, onConnect }: { wallet: Wallet; onConnect: ()
         ...(input.data ? [{ label: "Data", value: `${input.data.slice(0, 26)}…` }] : []),
       ],
     }));
+  };
+
+  const checkCustom = () => checkTx(to, amount, data);
+
+  // One click: fill the form with a real Sepolia WETH call and check it right away.
+  const loadWeth = (kind: keyof typeof WETH_ACTIONS) => {
+    const a = WETH_ACTIONS[kind];
+    setTo(SEPOLIA_WETH);
+    setAmount(a.amount);
+    setData(a.data);
+    checkTx(SEPOLIA_WETH, a.amount, a.data);
   };
 
   const sign = async () => {
@@ -96,9 +119,13 @@ export function CheckPage({ wallet, onConnect }: { wallet: Wallet; onConnect: ()
       <button className="btn btn-danger" disabled>Signing disabled</button>
     ) : (
       <>
-        <button className="btn btn-primary" onClick={sign} disabled={busy}>
-          {r.status === "trusted" ? "Sign with MetaMask" : "Sign anyway (not verified)"}
-        </button>
+        {wallet ? (
+          <button className="btn btn-primary" onClick={sign} disabled={busy}>
+            {r.status === "trusted" ? "Sign with MetaMask" : "Sign anyway (not verified)"}
+          </button>
+        ) : (
+          <button className="btn btn-primary" onClick={onConnect}>Connect wallet to sign</button>
+        )}
         {txHash && (
           <a className="btn" href={`${EXPLORER}/tx/${txHash}`} target="_blank" rel="noreferrer">
             Sent ✓ view on Etherscan <External />
@@ -132,10 +159,14 @@ export function CheckPage({ wallet, onConnect }: { wallet: Wallet; onConnect: ()
                 <button className="btn" onClick={onConnect}>Connect wallet</button>
               )}
             </div>
+            <div className="actions">
+              <button className="btn" onClick={() => loadWeth("wrap")} disabled={busy}>{WETH_ACTIONS.wrap.label}</button>
+              <button className="btn" onClick={() => loadWeth("unwrap")} disabled={busy}>{WETH_ACTIONS.unwrap.label}</button>
+            </div>
             <label className="field"><span>To</span><input value={to} onChange={(e) => edit(setTo, e.target.value)} placeholder="0x…" /></label>
             <label className="field"><span>Amount (ETH)</span><input value={amount} onChange={(e) => edit(setAmount, e.target.value)} /></label>
             <label className="field"><span>Data (optional)</span><input value={data} onChange={(e) => edit(setData, e.target.value)} placeholder="0x…" /></label>
-            <button className="btn btn-primary" onClick={checkCustom} disabled={busy || !wallet}>Check with PreSign</button>
+            <button className="btn btn-primary" onClick={checkCustom} disabled={busy}>Check with PreSign</button>
           </div>
         </div>
 
