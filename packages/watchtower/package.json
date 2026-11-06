@@ -3,6 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "scripts": { "scan": "tsx src/scan.ts" },
-  "dependencies": { "@presign/core": "*" }
+  "scripts": {
+    "scan": "tsx src/scan.ts",
+    "demo": "tsx src/demo.ts"
+  },
+  "dependencies": {
+    "@presign/core": "*",
+    "@arkiv-network/sdk": "^1.0.1",
+    "viem": "^2.57.16"
+  }
 }

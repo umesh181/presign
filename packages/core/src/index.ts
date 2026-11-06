@@ -8,3 +8,5 @@ export * from "./compress.ts";
 export * from "./tokens.ts";
 export * from "./chains.ts";
 export * from "./retry.ts";
+export * from "./bytecode.ts";
+export * from "./radar.ts";

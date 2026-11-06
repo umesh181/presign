@@ -10,6 +10,8 @@ type Step = { state: "ok" | "fail" | "warn"; text: string };
 /** Which checks ran and how they ended, derived from check()'s result. */
 function steps(kind: Kind, r: Result): Step[] {
   const d = r.details ?? {};
+  // Delegation Radar: check() returns its evidence line by line.
+  if (r.evidence?.length) return r.evidence.map((e) => ({ state: e.state, text: e.text }));
   if (kind === "delegation") {
     if (r.reason.startsWith("Removes the delegation")) return [{ state: "ok", text: "Revocation: restores a plain wallet" }];
     if (r.reason.startsWith("Hands your entire account")) return [{ state: "fail", text: "Delegate is not on any vendor allowlist on Arkiv" }];
@@ -66,7 +68,7 @@ export function Verdict(props: {
         <div className="status">
           <div className="status-icon">{ICON[r.status]}</div>
           <div>
-            <div className="status-label">{LABEL[r.status]}</div>
+            <div className="status-label">{kind === "delegation" && r.status === "unknown" ? "CAUTION" : LABEL[r.status]}</div>
             <div className="status-reason">{r.reason}</div>
           </div>
         </div>
@@ -98,7 +100,7 @@ export function Verdict(props: {
         </div>
 
         <div>
-          <div className="block-title">Checks</div>
+          <div className="block-title">{r.evidence?.length ? "Evidence (live from Arkiv + chain)" : "Checks"}</div>
           <div className="checks">
             {steps(kind, r).map((s) => (
               <div key={s.text} className={`check ${s.state}`}>
@@ -106,7 +108,7 @@ export function Verdict(props: {
                 {s.text}
               </div>
             ))}
-            {r.warnings.map((w) => (
+            {!r.evidence?.length && r.warnings.map((w) => (
               <div key={w} className="check warn">
                 <span className="ic"><Alert /></span>
                 {w}
@@ -114,6 +116,21 @@ export function Verdict(props: {
             ))}
           </div>
         </div>
+
+        {(typeof r.details?.radarKey === "string" || typeof r.details?.alertKey === "string") && (
+          <div className="chips">
+            {typeof r.details?.alertKey === "string" && (
+              <a className="chip" style={{ color: "var(--red)" }} href={`${ARKIV_EXPLORER}/entity/${r.details.alertKey}`} target="_blank" rel="noreferrer">
+                Alert on Arkiv {r.details.alertKey.slice(0, 10)}… <External />
+              </a>
+            )}
+            {typeof r.details?.radarKey === "string" && (
+              <a className="chip" href={`${ARKIV_EXPLORER}/entity/${r.details.radarKey}`} target="_blank" rel="noreferrer">
+                Watchtower profile {r.details.radarKey.slice(0, 10)}… <External />
+              </a>
+            )}
+          </div>
+        )}
 
         {(typeof r.details?.protocol === "string" || entityKey) && (
           <div className="chips">

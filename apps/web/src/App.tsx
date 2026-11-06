@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { CheckPage, type Wallet } from "./components/CheckPage.tsx";
 import { Explorer } from "./components/Explorer.tsx";
+import { Radar } from "./components/Radar.tsx";
 import { External, Shield } from "./components/icons.tsx";
 import { ARKIV_EXPLORER, liveStats, PUBLISHER, type Stats } from "./lib/arkiv.ts";
 import { connectWallet } from "./wallet.ts";
 
-type Page = "check" | "explorer";
+type Page = "check" | "radar" | "explorer";
 
 export function App() {
   const [page, setPage] = useState<Page>("check");
@@ -43,6 +44,7 @@ export function App() {
           </div>
           <nav className="nav">
             <button aria-pressed={page === "check"} onClick={() => setPage("check")}>Check</button>
+            <button aria-pressed={page === "radar"} onClick={() => setPage("radar")}>Radar</button>
             <button aria-pressed={page === "explorer"} onClick={() => setPage("explorer")}>Explorer</button>
           </nav>
           <div className="header-right">
@@ -66,19 +68,20 @@ export function App() {
             Know <em>who you trust</em>.
           </h1>
           <p>
-            PreSign mirrors Ethereum's clear-signing translations and the official EIP-7702 delegate contracts onto Arkiv,
-            verified and open to anyone, then checks every transaction or delegation before it's signed.
+            PreSign mirrors Ethereum's clear-signing translations onto Arkiv and watches every EIP-7702 delegate contract
+            on-chain, publishing the evidence (drainer code, upgradeable logic, logic changes) for any wallet to check before
+            a signature.
           </p>
           <div className="stats">
             <div className="stat"><b>{fmt(stats?.descriptors)}</b><span>Clear-signing translations</span><small>143 chains · EF registry</small></div>
             <div className="stat"><b>{fmt(stats?.attested)}</b><span>Audited by Cyfrin</span><small>auditor signatures verified</small></div>
-            <div className="stat"><b>{fmt(stats?.delegates)}</b><span>Trusted 7702 delegates</span><small>6 vendors · 7 chains</small></div>
+            <div className="stat"><b>{fmt(stats?.delegates)}</b><span>Vendor-listed 7702 delegates</span><small>6 vendors · 7 chains</small></div>
             <div className="stat"><b>7 days</b><span>Trust expiry</span><small>renewed only if sources match</small></div>
           </div>
         </section>
 
         {walletError && <p className="error">{walletError}</p>}
-        {page === "check" ? <CheckPage wallet={wallet} onConnect={connect} /> : <Explorer />}
+        {page === "check" ? <CheckPage wallet={wallet} onConnect={connect} /> : page === "radar" ? <Radar /> : <Explorer />}
       </main>
 
       <footer className="footer">

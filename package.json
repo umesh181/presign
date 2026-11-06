@@ -18,6 +18,7 @@
     "import:delegates": "npm run delegates -w @presign/importer --",
     "keeper": "npm run sync -w @presign/keeper --",
     "watchtower": "npm run scan -w @presign/watchtower --",
+    "radar:demo": "npm run demo -w @presign/watchtower --",
     "web": "npm run dev -w @presign/web",
     "verify:registry": "npm run verify -w @presign/importer --",
     "guard:demo": "npm run demo -w @presign/guard --"

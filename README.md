@@ -22,9 +22,10 @@ Working on Arkiv's Rabdi testnet: **1,917** clear-signing descriptors and **41**
 | `packages/core` | Shared library: Arkiv schemas + reader, fingerprints, `check()`, ERC-7730 formatter |
 | `packages/importer` | Re-runnable importers: descriptors (EF registry) and delegates (`sources/delegates.json`) |
 | `packages/keeper` | Daily re-sync: extend unchanged entries, let removed ones expire, write change records |
-| `packages/watchtower` | Live mainnet scanner for EIP-7702 delegations and burst alerts |
+| `packages/watchtower` | Delegation Radar: observes EIP-7702 delegations, inspects each delegate, publishes evidence and alerts to Arkiv |
+| `contracts/radar-demo` | Sepolia demo contracts for the Radar (beacon-backed delegate, harmless logic, drainer) |
 | `packages/guard` | Signer Guard: refuses to sign when `check()` says blocked |
-| `apps/web` | Demo UI: About to Sign, Binance Time Machine, Live Watchtower, Registry Explorer |
+| `apps/web` | Web app: Check (before signing), Radar (delegate evidence + live alerts), Explorer |
 | `sources/` | Vendor delegate sources (official repos only) |
 | `fixtures/` | Read-only demo inputs (Binance replay, …) |
 | `arkiv/` | Required judging docs |
@@ -48,7 +49,8 @@ Get an Arkiv access key at https://hub.arkiv.network/access-keys and testnet tGL
 | `npm run import:descriptors` | Import the clear-signing registry at `REGISTRY_COMMIT` |
 | `npm run import:delegates` | Import vendor delegates |
 | `npm run keeper` | Re-sync and extend expiry |
-| `npm run watchtower` | Start the mainnet watcher |
+| `npm run watchtower` | Delegation Radar: scan EIP-7702 delegations, publish evidence + alerts (`--write`, `--watch`, `--seed`) |
+| `npm run radar:demo` | Live Sepolia demo: a delegate's logic is swapped to a drainer → alert on Arkiv → PreSign blocks |
 | `npm run typecheck` / `npm test` | Checks (also run in CI) |
 
 ## Arkiv details (required)
@@ -81,6 +83,32 @@ Arkiv's public endpoint gives each IP a small anonymous query budget. If you see
 It returns entity [`0x76028dc5…9572`](https://rabdi.explorer.arkiv.network/entity/0x76028dc5a3cb1ad09b0946f175a541e6f262c6903eb86ed667860dc8eb9d9572) with owner `Uniswap Labs`, its fingerprint, and the exact registry file and commit it came from. Add `"descriptor":true` to `attributes` to get the full descriptor JSON (gzip-compressed).
 
 **EIP-7702 trusted delegates:** **41** entities: 6 vendors (MetaMask, Coinbase, Uniswap, OKX, ZeroDev, Alchemy) across 7 chains, each with its per-chain code hash. Query them with `arkiv.schema = str('presign.delegate.v1') AND $creator = addr(0x1784A22855d5E482112F94d2169c28bC7e6aF885)`.
+
+### Delegation Radar (evidence, not a guest list)
+
+A vendor allowlist only answers *"is this contract famous?"*. The Radar answers *"what is it, and has it changed?"*, from on-chain evidence anyone can recompute:
+
+- **Code family vs known drainers**: runtime code with metadata stripped and every 20/32-byte constant blanked, so sweeper clones that differ only in the attacker address match. Seeded from published research (`sources/known-bad.json`: 27 CrimeEnjoyor contracts catalogued by nullteilerfrei/Wintermute + GoPlus's 7702 phishing delegator → 16 families). Checked against our vendor contracts: no false matches.
+- **Upgradeable logic**: DELEGATECALL **plus** a dependency that's an EIP-1967 proxy or a beacon (`implementation()` + `upgradeTo()`). DELEGATECALL alone isn't flagged: vendor contracts use it with logic chosen by the account itself.
+- **Logic fingerprint**: code + every dependency's current implementation. If it changes, the Watchtower writes a `readonly` **Alert** (it can't be deleted), even for vendor-listed contracts.
+- **Profile**: vendor listing, first seen, how many accounts delegated (recovered from each authorization).
+
+`check()` turns this into the verdict a wallet shows: 🛑 known drainer code, a logic-change alert, a code mismatch with the vendor's version, no contract, or ≥5 authorizations in one transaction (nonce spraying); ⚠️ unknown / upgradeable / brand new; ✅ vendor-listed with clean evidence.
+
+```bash
+npm run watchtower -- --seed --write          # publish known drainer families + profile recent delegates
+npm run watchtower -- --watch --write         # keep watching; alert on logic changes
+npm run radar:demo                            # live Sepolia demo (below)
+```
+
+**Live demo (`npm run radar:demo`, real Sepolia transactions):**
+1. Deploy a delegate whose code never changes but whose logic sits behind a beacon (harmless smart account)
+2. Watchtower profiles it → PreSign: ⚠️ CAUTION (not vendor-listed, upgradeable by the beacon owner)
+3. A demo account delegates anyway
+4. The beacon owner swaps the logic for a drainer: the delegate address and its code are unchanged
+5. Watchtower: logic fingerprint changed → 🚨 Alert on Arkiv
+6. PreSign: 🛑 BLOCKED for anyone about to delegate; the delegated account sees the alert (Radar → "Is my account exposed?")
+7. The demo account revokes
 
 ### Signer Guard demo (real EIP-7702 transactions on Sepolia)
 

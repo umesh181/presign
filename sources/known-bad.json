@@ -1,0 +1,173 @@
+{
+  "_comment": "Known EIP-7702 drainer contracts from published incident research. The Watchtower computes each one's code family and publishes it to Arkiv (presign.badfamily.v1). Add entries only with a public source.",
+  "entries": [
+    {
+      "chainId": 1,
+      "address": "0x89383882fc2d0cd4d7952a3267a3b6dae967e704",
+      "label": "CrimeEnjoyor v1 original",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x89046d34e70a65acab2152c26a0c8e493b5ba629",
+      "label": "CrimeEnjoyor v3 original",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x6b7879a5d747e30a3adb37a9e41c046928fce933",
+      "label": "CrimeEnjoyor v2 original",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0xcaaf0145b65939eb9ed0c039afa1ac55647e80be",
+      "label": "CrimeEnjoyor v3 full",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x668924ffadb2b3e226468aaf42c35b356d8d7589",
+      "label": "CrimeEnjoyor v3 full",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0xff413c217a33e0e35979ed8117f2e8634f47076a",
+      "label": "CrimeEnjoyor v3 extended",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x6799946b74e065f14ebf4933df96dcfa24c27c28",
+      "label": "CrimeEnjoyor v3 extended",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0xcc3f0923ccbed291a2109bce77579c328691eea4",
+      "label": "CrimeEnjoyor v3 extended",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x34ee0e6e1661fbd1f4a9401e8eaa11db966756c5",
+      "label": "CrimeEnjoyor v3 extended",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x0727ca41efc85f75cef26ee48f825893b4836786",
+      "label": "CrimeEnjoyor v1 clone",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0xfc2c64ce1c098a7328874dd09d9a71e306d1a948",
+      "label": "CrimeEnjoyor v1 clone",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0xb0645bf2733ecaddca943c6d1be2ab16363700c7",
+      "label": "CrimeEnjoyor v3 stripped",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x00000000599b0f29f74cf4d8bf376734ab6a0700",
+      "label": "CrimeEnjoyor v3 extended",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0xbcb5e49e5ee1adbdcb1db70f5706d0c12e90aa13",
+      "label": "CrimeEnjoyor v3 stripped",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x3c3d718877a7d95857e1ae74b3963bddefb81931",
+      "label": "CrimeEnjoyor v1 clone",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x5e6c2d95c69a2e8ade7faa88666365561c29cd11",
+      "label": "CrimeEnjoyor v3 stripped",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x3acf630a625ad483415228faae718d8c2f9076f5",
+      "label": "CrimeEnjoyor v3 stripped",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0xbee2f0de34362ff34a9189c2b2e67ed61a3300e9",
+      "label": "CrimeEnjoyor v3 stripped",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0xacc9a2dd12a455d28b31e4023c83b4ab1ec1ed6b",
+      "label": "CrimeEnjoyor v3 stripped",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0xdad82443ff5098217690350a323d8be2b7e23680",
+      "label": "CrimeEnjoyor v3 stripped",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0xc56882c2fd9b15510a92331e74d6e53b083988b5",
+      "label": "CrimeEnjoyor v3 full",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x710fad1041f0ee79916bb1a6adef662303bb8b6e",
+      "label": "CrimeEnjoyor v1 clone",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x3ac5f265b93c63014534893c0b6300ddfc5d2ebe",
+      "label": "CrimeEnjoyor v3 stripped",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x07e24e265de698fb3b2b02315f70154619a184b0",
+      "label": "CrimeEnjoyor v3 stripped",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x6a690c2b94fa1f07668fcdc47cfe0cecb197c1b7",
+      "label": "CrimeEnjoyor v1 clone",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x540fe9bec2470e93aa911906eb560ad6647612c2",
+      "label": "CrimeEnjoyor v2 clone",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0xb6da1852c218d74257593126fdfbd20f0bceb2a8",
+      "label": "CrimeEnjoyor v1 clone",
+      "source": "https://blag.nullteilerfrei.de/?p=6189"
+    },
+    {
+      "chainId": 1,
+      "address": "0x930fcc37d6042c79211ee18a02857cb1fd7f0d0b",
+      "label": "GoPlus: 7702 phishing delegator",
+      "source": "https://defihacklabs.substack.com/p/top-7702-delegator-revealed-as-phishing"
+    }
+  ]
+}

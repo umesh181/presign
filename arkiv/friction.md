@@ -65,6 +65,13 @@ Everything below is something we hit or verified ourselves while building PreSig
 - **Impact:** a judge on a shared venue Wi-Fi can hit it. We now document the key header next to every copyable query. The error message is clear, which helped.
 - **Suggestion:** publish the anonymous budget (queries per hour per IP) on the access-keys page.
 
+### 11. A hex string for a `bytes()` column is silently typed as `str`
+- **Expected:** `{ deps: "0x5b7b…" }` on a `bytes()` column is stored as bytes (the docs say `bytes("0x…")` takes hex as the bytes it spells).
+- **Actual:** a *bare* string value is inferred as `str` before the column type is consulted, so it fails with `Invalid str value … 570 UTF-8 bytes exceeds the 128-byte limit on a str`. Passing a `Uint8Array` (or wrapping it in `bytes(…)`) works.
+- **Repro:** `executeBatch({ creates: [{ schema: S, values: { blob: "0x" + "ab".repeat(200) } }] })` where `blob: bytes()`.
+- **Impact:** our first Radar write failed; the error message pointed the right way (use a bytes column), which was confusing because it already was one.
+- **Suggestion:** coerce by the schema's column type when one is declared.
+
 ---
 
 ## What worked well

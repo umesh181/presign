@@ -8,8 +8,8 @@ import { and, eq } from "@arkiv-network/sdk/query";
 import { addr, u64 } from "@arkiv-network/sdk/schema";
 import { hexToBytes, http, type Hex } from "viem";
 import { gunzip } from "./compress.ts";
-import type { DelegateRecord, DescriptorRecord } from "./check.ts";
-import { Delegate, Descriptor } from "./schemas.ts";
+import type { AlertRecord, BadFamilyRecord, DelegateDeps, DelegateRecord, DescriptorRecord, RadarRecord } from "./check.ts";
+import { Alert, BadFamily, Delegate, Descriptor, RadarProfile } from "./schemas.ts";
 
 export function createReader(accessKey: string) {
   // Rabdi = Arkiv's current testnet (chain 7794095). An empty key falls back to the
@@ -76,5 +76,75 @@ export function delegateLookup(reader: Reader, publisher: Hex) {
       codeHash: row.codeHash.value as Hex,
       entityKey: row.$key,
     };
+  };
+}
+
+// ---------- Delegation Radar (written by the Watchtower) ----------
+
+/** Known drainer family (presign.badfamily.v1) for a code family hash. */
+export function badFamilyLookup(reader: Reader, publisher: Hex) {
+  return async (family: Hex): Promise<BadFamilyRecord | null> => {
+    const r = await reader
+      .select({ $key: true, label: true, source: true })
+      .from(BadFamily)
+      .where(and(eq("family", family), eq("status", "active")))
+      .createdBy(publisher)
+      .limit(1)
+      .fetch();
+    const row = r.entities[0];
+    return row ? { label: row.label.value, source: row.source.value, entityKey: row.$key } : null;
+  };
+}
+
+/** The Watchtower's profile of a delegate (presign.radar.v1). */
+export function profileLookup(reader: Reader, publisher: Hex) {
+  return async (chainId: number, address: Hex): Promise<RadarRecord | null> => {
+    const r = await reader
+      .select({ $key: true, upgradeable: true, upgradeableVia: true, firstSeenAt: true, accounts: true, authorizations: true })
+      .from(RadarProfile)
+      .where(and(eq("chainId", u64(chainId)), eq("address", addr(address)), eq("status", "active")))
+      .createdBy(publisher)
+      .limit(1)
+      .fetch();
+    const row = r.entities[0];
+    if (!row) return null;
+    return {
+      upgradeable: row.upgradeable.value,
+      ...(row.upgradeableVia?.value ? { upgradeableVia: row.upgradeableVia.value } : {}),
+      firstSeenAt: Number(row.firstSeenAt.value),
+      accounts: Number(row.accounts.value),
+      authorizations: Number(row.authorizations.value),
+      entityKey: row.$key,
+    };
+  };
+}
+
+/** Watchtower alerts about a delegate that haven't expired yet (presign.alert.v1, readonly). */
+export function alertsLookup(reader: Reader, publisher: Hex) {
+  return async (chainId: number, address: Hex): Promise<AlertRecord[]> => {
+    const r = await reader
+      .select({ $key: true, alertType: true, message: true, detectedAt: true })
+      .from(Alert)
+      .where(and(eq("chainId", u64(chainId)), eq("delegate", addr(address))))
+      .createdBy(publisher)
+      .limit(20)
+      .fetch();
+    return r.entities.map((e) => ({ alertType: e.alertType.value, message: e.message.value, detectedAt: Number(e.detectedAt.value), entityKey: e.$key }));
+  };
+}
+
+/** Everything checkDelegation() needs: chain reads + vendor list + Radar evidence, all from Arkiv. */
+export function delegateDepsFor(reader: Reader, publisher: Hex, clients: Record<number, { getCode(a: { address: Hex }): Promise<Hex | undefined> }>): DelegateDeps {
+  return {
+    lookupDelegate: delegateLookup(reader, publisher),
+    currentCode: async (chainId, address) => {
+      const client = clients[chainId];
+      if (!client) throw new Error(`No RPC for chain ${chainId}`);
+      const code = await client.getCode({ address });
+      return code && code !== "0x" ? code : null;
+    },
+    lookupBadFamily: badFamilyLookup(reader, publisher),
+    lookupProfile: profileLookup(reader, publisher),
+    lookupAlerts: alertsLookup(reader, publisher),
   };
 }

@@ -13,8 +13,8 @@ const deps: DelegateDeps = {
       ? { vendor: "MetaMask", contractName: "EIP7702StatelessDeleGatorImpl", codeHash: FAKE_CODE_HASH }
       : null;
   },
-  async currentCodeHash() {
-    return FAKE_CODE_HASH;
+  async currentCode() {
+    return "0x6001";
   },
 };
 
@@ -37,7 +37,7 @@ describe("checkDelegation", () => {
   });
 
   it("blocks when live code differs from the trusted code hash", async () => {
-    const result = await checkDelegation([{ chainId: 1, address: METAMASK, nonce: 0 }], { ...deps, currentCodeHash: async () => codeHash("0x6002") });
+    const result = await checkDelegation([{ chainId: 1, address: METAMASK, nonce: 0 }], { ...deps, currentCode: async () => "0x6002" });
     expect(result.status).toBe("blocked");
   });
 

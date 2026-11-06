@@ -16,6 +16,20 @@
 | **Atomic `executeBatch`** | Each keeper change is one transaction: new entity + retire old + history record. A half-applied update can't exist | Needs careful transaction handling; readers can't verify it happened |
 | **Typed, indexed attributes** | Filter by `chainId` + `address` + `status` (+ `attested`) in one query, exactly how a signer searches | This part Postgres does fine. Arkiv gives it without running a server |
 
+## The Delegation Radar: data that exists nowhere else
+
+The mirrors copy lists that already exist. The Radar **creates new public data**: evidence about every EIP-7702 delegate contract, observed on-chain by the Watchtower and published to Arkiv.
+
+The question it answers is not *"who claims to be trusted?"* (a list someone can be paid to join), but *"what is this contract, and has it changed?"*:
+
+| Evidence on Arkiv | What it catches | Why Arkiv |
+|---|---|---|
+| **Known drainer code families** (`presign.badfamily.v1`, from published research) | Sweeper clones at brand-new addresses: their code family matches even when the hardcoded attacker address differs | One shared, queryable threat list. A wallet computes the family of the code it's about to trust and asks Arkiv |
+| **Delegate profiles** (`presign.radar.v1`): upgradeable?, vendor-listed?, first seen, accounts | "Upgradeable: its owner can swap the logic after you sign"; "first seen 2 h ago" | Every wallet reads the same evidence, no PreSign server. Expires unless the Watchtower keeps re-checking it |
+| **Alerts** (`presign.alert.v1`, `readonly`) | "Logic changed after you delegated" — even for a vendor-listed contract | Can't be edited or deleted after the fact. Anyone can query alerts for the delegate their account uses |
+
+**Why this answers "what if a provider pays to be listed?"**: there is no verdict to buy. A vendor listing is one line of evidence; known-drainer code, a logic change or an upgradeable dependency still show up next to it. Every line is recomputable from the chain, and because entities carry a provable `$creator`, other watchers (security firms, wallets) can publish the same schemas and a wallet can require several independent publishers to agree.
+
 ## What people can do with our copy that they can't with the original sources today
 
 | Original source | Today | With PreSign on Arkiv |

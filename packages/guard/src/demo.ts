@@ -10,7 +10,7 @@
  * Run: npm run demo -w @presign/guard        (add -- --keep to skip step 4)
  */
 import { env } from "@presign/core/node";
-import { PUBLIC_RPC, checkDelegation, codeHash, createReader, delegateLookup, type DelegateDeps } from "@presign/core";
+import { PUBLIC_RPC, checkDelegation, codeHash, createReader, delegateDepsFor, type DelegateDeps } from "@presign/core";
 import { createPublicClient, createWalletClient, http, zeroAddress, type Hex, type PublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { mainnet, sepolia } from "viem/chains";
@@ -26,13 +26,7 @@ const clients: Record<number, PublicClient> = {
   [sepolia.id]: createPublicClient({ chain: sepolia, transport: http(PUBLIC_RPC[sepolia.id]) }) as PublicClient,
   [mainnet.id]: createPublicClient({ chain: mainnet, transport: http(PUBLIC_RPC[mainnet.id]) }) as PublicClient,
 };
-const deps: DelegateDeps = {
-  lookupDelegate: delegateLookup(createReader(env("ARKIV_ACCESS_KEY")), env("PUBLISHER_ADDRESS") as Hex),
-  currentCodeHash: async (chainId, address) => {
-    const code = await clients[chainId]?.getCode({ address });
-    return code && code !== "0x" ? codeHash(code) : null;
-  },
-};
+const deps: DelegateDeps = delegateDepsFor(createReader(env("ARKIV_ACCESS_KEY")), env("PUBLISHER_ADDRESS") as Hex, clients);
 const sepoliaTx = (h: string) => `https://sepolia.etherscan.io/tx/${h}`;
 const sepoliaReader = clients[sepolia.id]!;
 

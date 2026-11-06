@@ -6,8 +6,7 @@ import {
   PUBLIC_RPC,
   checkDelegation,
   checkTransaction,
-  codeHash,
-  delegateLookup,
+  delegateDepsFor,
   descriptorLookup,
   erc20Lookup,
   formatCalldata,
@@ -53,13 +52,7 @@ export const txDeps: TransactionDeps = {
   format: (descriptor, t) => formatCalldata(descriptor, { ...t, data: t.data! }, tokens),
 };
 
-export const delegateDeps: DelegateDeps = {
-  lookupDelegate: delegateLookup(reader, PUBLISHER),
-  currentCodeHash: async (chainId, address) => {
-    const code = await clients[chainId]?.getCode({ address });
-    return code && code !== "0x" ? codeHash(code) : null;
-  },
-};
+export const delegateDeps: DelegateDeps = delegateDepsFor(reader, PUBLISHER, clients);
 
 export type Kind = "transaction" | "delegation";
 
