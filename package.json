@@ -14,12 +14,12 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "import:descriptors": "npm run descriptors -w @presign/importer",
-    "import:delegates": "npm run delegates -w @presign/importer",
-    "keeper": "npm run sync -w @presign/keeper",
-    "watchtower": "npm run scan -w @presign/watchtower",
+    "import:descriptors": "npm run descriptors -w @presign/importer --",
+    "import:delegates": "npm run delegates -w @presign/importer --",
+    "keeper": "npm run sync -w @presign/keeper --",
+    "watchtower": "npm run scan -w @presign/watchtower --",
     "web": "npm run dev -w @presign/web",
-    "verify:registry": "npm run verify -w @presign/importer"
+    "verify:registry": "npm run verify -w @presign/importer --"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
