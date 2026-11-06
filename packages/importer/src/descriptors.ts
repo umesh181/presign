@@ -14,6 +14,7 @@
  * Run: npm run import:descriptors            (dry run: build + validate, no writes)
  *      npm run import:descriptors -- --write (writes to Arkiv; needs .env)
  */
+import { pathToFileURL } from "node:url";
 import { createPublisher, env } from "@presign/core/node"; // also loads the repo-root .env
 import { Descriptor, createReader, descriptorHash, gzip, resolveDescriptor } from "@presign/core";
 import { ExpirationTime } from "@arkiv-network/sdk";
@@ -134,6 +135,30 @@ async function main() {
   await writeRows(todo);
 }
 
+/** The Arkiv create for one descriptor row (shared with the keeper so both write the same format). */
+export function descriptorCreate(r: DescriptorRow) {
+  return {
+    schema: Descriptor,
+    values: {
+      chainId: u64(r.chainId),
+      address: addr(r.address),
+      descriptorHash: r.descriptorHash,
+      attested: r.attested,
+      status: r.status,
+      importedAt: u64(r.importedAt),
+      protocolOwner: r.protocolOwner,
+      sourceRepo: r.sourceRepo,
+      sourceCommit: r.sourceCommit,
+      sourcePath: r.sourcePath,
+      descriptor: r.descriptor,
+    },
+    // Trust expires unless the keeper re-confirms it. Anyone may extend (keep alive),
+    // nobody but us can change the content.
+    expiration: ExpirationTime.fromDays(7),
+    flags: { permissionlessExtension: true },
+  };
+}
+
 const keyOf = (chainId: number, address: string) => `${chainId}:${address.toLowerCase()}`;
 
 /** All active descriptors our publisher already wrote, keyed by chainId:address. */
@@ -189,26 +214,7 @@ async function writeRows(rows: DescriptorRow[]) {
     if (batch.length === 0) batch.push(creates[i++]!); // a single large row still goes alone
 
     const result = await wallet.executeBatch({
-      creates: batch.map((r) => ({
-        schema: Descriptor,
-        values: {
-          chainId: u64(r.chainId),
-          address: addr(r.address),
-          descriptorHash: r.descriptorHash,
-          attested: r.attested,
-          status: r.status,
-          importedAt: u64(r.importedAt),
-          protocolOwner: r.protocolOwner,
-          sourceRepo: r.sourceRepo,
-          sourceCommit: r.sourceCommit,
-          sourcePath: r.sourcePath,
-          descriptor: r.descriptor,
-        },
-        // Trust expires unless the keeper re-confirms it. Anyone may extend (keep alive),
-        // nobody but us can change the content.
-        expiration: ExpirationTime.fromDays(7),
-        flags: { permissionlessExtension: true },
-      })),
+      creates: batch.map(descriptorCreate),
     });
     written += result.createdEntities.length;
     console.log(`  batch ok: +${result.createdEntities.length} (total ${written}/${creates.length}) tx ${result.txHash}`);
@@ -230,7 +236,10 @@ async function writeRows(rows: DescriptorRow[]) {
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Run only when executed directly (the keeper imports this module).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

@@ -11,5 +11,10 @@
   },
   "dependencies": {
     "@presign/core": "*"
+  },
+  "exports": {
+    "./descriptors": "./src/descriptors.ts",
+    "./delegates": "./src/delegates.ts",
+    "./registry": "./src/registry.ts"
   }
 }

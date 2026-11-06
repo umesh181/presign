@@ -14,6 +14,7 @@
  *      npm run import:delegates -- --write (write to Arkiv; re-running writes nothing new)
  */
 import { readFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 import { createPublisher, env } from "@presign/core/node";
 import { Delegate, PUBLIC_RPC, codeHash, createReader } from "@presign/core";
 import { ExpirationTime } from "@arkiv-network/sdk";
@@ -78,7 +79,9 @@ function sameContract(a: Hex, b: Hex, max = 64): { same: boolean; diffBytes: num
 }
 
 export async function buildDelegateRows() {
-  const config = JSON.parse(await readFile(new URL("../../../sources/delegates.json", import.meta.url), "utf8"));
+  // DELEGATE_SOURCES overrides the config file (used by the keeper's live change test).
+  const path = process.env.DELEGATE_SOURCES || new URL("../../../sources/delegates.json", import.meta.url);
+  const config = JSON.parse(await readFile(path, "utf8"));
   const rows: DelegateRow[] = [];
   const log: string[] = [];
   const importedAt = Math.floor(Date.now() / 1000);
@@ -125,6 +128,29 @@ export async function buildDelegateRows() {
   return { rows, log };
 }
 
+/** The Arkiv create for one delegate row (shared with the keeper so both write the same format). */
+export function delegateCreate(r: DelegateRow) {
+  return {
+    schema: Delegate,
+    values: {
+      chainId: u64(r.chainId),
+      address: addr(r.address),
+      codeHash: r.codeHash,
+      vendor: r.vendor,
+      status: r.status,
+      importedAt: u64(r.importedAt),
+      contractName: r.contractName,
+      ...(r.version ? { version: r.version } : {}),
+      sourceType: r.sourceType,
+      sourceRepo: r.sourceRepo,
+      sourcePath: r.sourcePath,
+      sourceCommit: r.sourceCommit,
+    },
+    expiration: ExpirationTime.fromDays(7),
+    flags: { permissionlessExtension: true },
+  };
+}
+
 const keyOf = (chainId: number, address: string) => `${chainId}:${address.toLowerCase()}`;
 
 async function loadExisting(publisher: Hex) {
@@ -157,25 +183,7 @@ async function writeRows(rows: DelegateRow[]) {
 
   for (let i = 0; i < creates.length; i += 20) {
     const result = await wallet.executeBatch({
-      creates: creates.slice(i, i + 20).map((r) => ({
-        schema: Delegate,
-        values: {
-          chainId: u64(r.chainId),
-          address: addr(r.address),
-          codeHash: r.codeHash,
-          vendor: r.vendor,
-          status: r.status,
-          importedAt: u64(r.importedAt),
-          contractName: r.contractName,
-          ...(r.version ? { version: r.version } : {}),
-          sourceType: r.sourceType,
-          sourceRepo: r.sourceRepo,
-          sourcePath: r.sourcePath,
-          sourceCommit: r.sourceCommit,
-        },
-        expiration: ExpirationTime.fromDays(7),
-        flags: { permissionlessExtension: true },
-      })),
+      creates: creates.slice(i, i + 20).map(delegateCreate),
     });
     console.log(`  batch ok: +${result.createdEntities.length} tx ${result.txHash}`);
   }
@@ -202,7 +210,10 @@ async function main() {
   await writeRows(rows);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Run only when executed directly (the keeper imports this module).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

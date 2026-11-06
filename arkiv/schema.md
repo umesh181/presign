@@ -11,8 +11,8 @@ Source of truth: [`packages/core/src/schemas.ts`](../packages/core/src/schemas.t
 | Schema (`arkiv.schema`) | One entity per | Status | Expiry | Flags |
 |---|---|---|---|---|
 | `presign.descriptor.v1` | (chainId, contract address) | **Live: 1,917 entities** | 7 days from write; the keeper re-extends while the source still matches | `permissionlessExtension` |
-| `presign.delegate.v1` | (chainId, EIP-7702 delegate address) | Defined, importer in progress | 7 days, keeper-extended | planned: `permissionlessExtension` |
-| `presign.change.v1` | detected change to a trusted entry | Defined, written by the keeper | planned | planned: `readonly` |
+| `presign.delegate.v1` | (chainId, EIP-7702 delegate address) | **Live: 41 entities** | 7 days, keeper-extended | `permissionlessExtension` |
+| `presign.change.v1` | detected change to a trusted entry | **Live**, written by the keeper (none yet for the real publisher: sources unchanged since import) | 90 days | `readonly` + `permissionlessExtension` |
 | `presign.alert.v1` | watchtower alert | Defined (optional add-on) | 7 days | planned: `readonly` |
 
 **Why these flags:** with `permissionlessExtension`, anyone can keep an entry alive if we stop running the keeper, but only the publisher can change its content. With `readonly`, history can never be rewritten.
@@ -27,7 +27,7 @@ One ERC-7730 calldata descriptor bound to one deployment. Built from `index.call
 | `address` | addr | ✅ | `0xE592…1564` | Contract the descriptor covers |
 | `descriptorHash` | str | ✅ | `0x2988…17cb` | ERC-8176: keccak256(JCS(resolved descriptor)) |
 | `attested` | bool | ✅ | `true` | A trusted auditor's EAS attestation (signer recovered and checked) carries exactly this hash |
-| `status` | str | ✅ | `active` | `active` or `superseded`. A positive value, because the query language has no `!=` |
+| `status` | str | ✅ | `active` | `active`, `superseded` or `removed`. A positive value, because the query language has no `!=` |
 | `importedAt` | u64 | ✅ | `1793938677` | Unix seconds (here 2026-11-06 04:17:57 UTC) |
 | `sourceCommit` | str | ✅ | `ef582c2f…` | Pinned registry commit |
 | `protocolOwner` | str | | `Uniswap Labs` | `metadata.owner` (≤128 bytes) |

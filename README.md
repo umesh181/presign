@@ -91,6 +91,21 @@ npm run guard:demo
 3. The real Binance delegation (mainnet tx `0xad99…298b`, read-only, 50 authorizations) → 🛑 refused
 4. Revoke the delegation → ✅ trusted → wallet restored to a plain EOA
 
+### Keeper (keeps trust fresh)
+
+```bash
+npm run keeper              # dry run: what would change
+npm run keeper -- --write   # apply
+```
+
+It re-reads the sources (latest EF registry commit; every vendor file plus on-chain code) and compares them with our active entities on Arkiv:
+- **unchanged**: extend expiry 7 days
+- **added**: create the entity + a `Change` record
+- **modified**: create the new entity, mark the old one `superseded`, write a `Change` record
+- **removed**: mark the entity `removed` immediately (so `check()` stops trusting it now), write a `Change` record
+
+Each item is one atomic Arkiv transaction. `Change` records are `readonly`, so history can't be rewritten. If a source can't be read (GitHub or an RPC is down), the run fails and changes nothing, so an outage can never "remove" trusted entries. Set `GITHUB_TOKEN` for regular runs; unauthenticated GitHub allows only 60 requests per hour.
+
 ### Reproduce the import
 
 ```bash

@@ -34,3 +34,19 @@ TODO:
 
 - **Uniswap Universal Router:** the EF registry has no descriptor for it at our pinned commit, and it's what app.uniswap.org uses today. PreSign correctly reports those swaps as `unknown` (no verified translation). Older Uniswap routers (V2Router02, V3 SwapRouter, SwapRouter02) are covered.
 - **EIP-712 descriptors** (133 files) are not mirrored yet. Only calldata descriptors are.
+
+## Freshness: the keeper
+
+**Real publisher, 2026-11-06:** the sources were unchanged (registry still at `ef582c2`, all vendor files and code still matching), so the keeper extended all **1,958** entities (1,917 descriptors + 41 delegates) by 7 days in 11 transactions for **0.043 tGLM**. Read-back: "1917 active, expiry in 7.00 days, matches sources exactly" and "41 active, expiry in 7.00 days, matches sources exactly".
+
+**Live change test** (throwaway publisher `0xfA4D462E573B30f1B35dDEF3654879EF084e7447`, so real data is untouched; delegates only):
+
+| Step | Simulated event | Keeper result | Verified |
+|---|---|---|---|
+| A | First run | added 41 | 41 active, match sources |
+| B | Vendor drops Alchemy from its list | removed 7 (marked `removed` immediately), extended 34 | `check()` now **blocks** Alchemy and still trusts MetaMask |
+| C | One stored code hash corrupted (Coinbase, chain 1) | modified 1: new correct entity, old one `superseded` | 34 active, match sources |
+| D | Alchemy listed again | added 7 | 41 active, match sources |
+| E | Re-run, nothing changed | extend 41, **0 changes** | idempotent |
+
+The test produced 56 `Change` records (48 added, 7 removed, 1 modified), all `readonly`. Query them with `arkiv.schema = str('presign.change.v1') AND $creator = addr(0xfA4D462E573B30f1B35dDEF3654879EF084e7447)`.

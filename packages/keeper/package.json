@@ -3,6 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "scripts": { "sync": "tsx src/sync.ts" },
-  "dependencies": { "@presign/core": "*" }
+  "scripts": {
+    "sync": "tsx src/sync.ts"
+  },
+  "dependencies": {
+    "@presign/core": "*",
+    "@presign/importer": "*",
+    "viem": "^2.57.16",
+    "@arkiv-network/sdk": "^1.0.1"
+  }
 }
