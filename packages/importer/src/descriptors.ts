@@ -188,7 +188,23 @@ async function loadExisting(publisher: Hex) {
  * - same (chainId, address) with a new hash     -> create new, patch old status to "superseded"
  * Batches stay well under the 2^24 gas cap per transaction.
  */
+/**
+ * Resume-safe writes: on an error (e.g. RPC timeout), wait, then run again. Each attempt first
+ * re-reads what is already on Arkiv, so batches that did land are skipped, never written twice.
+ */
 async function writeRows(rows: DescriptorRow[]) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await writeRowsOnce(rows);
+    } catch (e) {
+      if (attempt >= 3) throw e;
+      console.warn(`\nWrite attempt ${attempt} failed (${(e as Error).message.split("\n")[0]}); re-reading Arkiv and resuming in ${5 * attempt}s…`);
+      await new Promise((r) => setTimeout(r, 5000 * attempt));
+    }
+  }
+}
+
+async function writeRowsOnce(rows: DescriptorRow[]) {
   const wallet = createPublisher();
   const publisher = wallet.account.address;
   console.log(`\nPublisher: ${publisher}`);

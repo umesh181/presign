@@ -7,6 +7,7 @@
  *   only by case, so extracting would silently overwrite one of them.
  */
 import { gunzipSync } from "node:zlib";
+import { retry } from "@presign/core";
 
 const ghHeaders = (): Record<string, string> => {
   const token = process.env.GITHUB_TOKEN;
@@ -19,9 +20,11 @@ const ghHeaders = (): Record<string, string> => {
 
 /** Latest commit SHA on a branch (used to pin, and by the keeper to detect changes). */
 export async function latestCommit(repo: string, ref = "master"): Promise<string> {
-  const res = await fetch(`https://api.github.com/repos/${repo}/commits/${ref}`, { headers: ghHeaders() });
-  if (!res.ok) throw new Error(`GitHub ${res.status} for ${repo}@${ref}`);
-  return ((await res.json()) as { sha: string }).sha;
+  return retry(async () => {
+    const res = await fetch(`https://api.github.com/repos/${repo}/commits/${ref}`, { headers: ghHeaders() });
+    if (!res.ok) throw new Error(`GitHub ${res.status} for ${repo}@${ref}`);
+    return ((await res.json()) as { sha: string }).sha;
+  }, "GitHub latest commit");
 }
 
 export interface RegistrySnapshot {
@@ -33,11 +36,13 @@ export interface RegistrySnapshot {
 
 /** Download repo@commit as a tarball and return its text files keyed by repo-relative path. */
 export async function fetchRegistry(repo: string, commit: string): Promise<RegistrySnapshot> {
-  const res = await fetch(`https://codeload.github.com/${repo}/tar.gz/${commit}`, {
-    headers: { "User-Agent": "presign-importer" },
-  });
-  if (!res.ok) throw new Error(`Tarball download failed: ${res.status}`);
-  const tar = gunzipSync(Buffer.from(await res.arrayBuffer()));
+  const tar = await retry(async () => {
+    const res = await fetch(`https://codeload.github.com/${repo}/tar.gz/${commit}`, {
+      headers: { "User-Agent": "presign-importer" },
+    });
+    if (!res.ok) throw new Error(`Tarball download failed: ${res.status}`);
+    return gunzipSync(Buffer.from(await res.arrayBuffer()));
+  }, "registry tarball download");
   const files = new Map<string, string>();
   for (const [path, content] of readTar(tar)) {
     // GitHub prefixes every path with "<owner>-<repo>-<sha>/": strip it.

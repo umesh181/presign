@@ -16,7 +16,7 @@
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { createPublisher, env } from "@presign/core/node";
-import { Delegate, PUBLIC_RPC, codeHash, createReader } from "@presign/core";
+import { Delegate, PUBLIC_RPC, codeHash, createReader, retry } from "@presign/core";
 import { ExpirationTime } from "@arkiv-network/sdk";
 import { addr, u64 } from "@arkiv-network/sdk/schema";
 import { createPublicClient, getAddress, http, type Hex } from "viem";
@@ -51,6 +51,10 @@ const ghHeaders = (): Record<string, string> => ({
 
 /** Latest commit that touched the vendor's file, and the file content at exactly that commit. */
 async function fetchSource(src: VendorSource["source"]) {
+  return retry(() => fetchSourceOnce(src), `GitHub ${src.repo}`);
+}
+
+async function fetchSourceOnce(src: VendorSource["source"]) {
   const q = `https://api.github.com/repos/${src.repo}/commits?path=${encodeURIComponent(src.path)}&sha=${src.ref}&per_page=1`;
   const res = await fetch(q, { headers: ghHeaders() });
   if (!res.ok) throw new Error(`GitHub ${res.status} for ${src.repo}/${src.path}`);
@@ -66,7 +70,7 @@ const clients = Object.fromEntries(
 );
 
 async function getCode(chainId: number, address: Hex): Promise<Hex | null> {
-  const code = await clients[chainId]!.getCode({ address });
+  const code = await retry(() => clients[chainId]!.getCode({ address }), `getCode chain ${chainId}`);
   return code && code !== "0x" ? code : null;
 }
 
@@ -173,7 +177,23 @@ async function loadExisting(publisher: Hex) {
 }
 
 /** Same rules as the descriptor importer: skip unchanged, create changed, supersede old. */
+/**
+ * Resume-safe writes: on an error (e.g. RPC timeout), wait, then run again. Each attempt first
+ * re-reads what is already on Arkiv, so batches that did land are skipped, never written twice.
+ */
 async function writeRows(rows: DelegateRow[]) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await writeRowsOnce(rows);
+    } catch (e) {
+      if (attempt >= 3) throw e;
+      console.warn(`\nWrite attempt ${attempt} failed (${(e as Error).message.split("\n")[0]}); re-reading Arkiv and resuming in ${5 * attempt}s…`);
+      await new Promise((r) => setTimeout(r, 5000 * attempt));
+    }
+  }
+}
+
+async function writeRowsOnce(rows: DelegateRow[]) {
   const wallet = createPublisher();
   const publisher = wallet.account.address;
   const existing = await loadExisting(publisher);
