@@ -68,18 +68,11 @@ export function SendFlow() {
       .catch(() => {});
   }, []);
 
-  const check = () =>
+  // Runs check() on an explicit input (form state may not be updated yet after a scenario click).
+  const runCheck = (input: TxInput) =>
     run(async () => {
       setResult(null);
       setTxHash(null);
-      if (!isAddress(to)) throw new Error("Recipient is not a valid address");
-      if (data && !isHex(data)) throw new Error("Data must be 0x-prefixed hex");
-      const input: TxInput = {
-        chainId,
-        to: getAddress(to),
-        value: parseEther(amount || "0"),
-        data: (data || undefined) as Hex | undefined,
-      };
       setTx(input);
       setResult(
         await checkTransaction(input, {
@@ -90,13 +83,25 @@ export function SendFlow() {
       );
     });
 
+  const check = () => {
+    setError("");
+    if (!isAddress(to)) return setError("Recipient is not a valid address");
+    if (data && !isHex(data)) return setError("Data must be 0x-prefixed hex");
+    runCheck({
+      chainId,
+      to: getAddress(to),
+      value: parseEther(amount || "0"),
+      data: (data || undefined) as Hex | undefined,
+    });
+  };
+
+  // One click: fill the form with the real mainnet tx AND run the check.
   const loadUniswap = () => {
     setTo(uniswapTx.to!);
     setAmount(formatEther(uniswapTx.value ?? 0n));
     setData(uniswapTx.data!);
     setChainId(uniswapTx.chainId!);
-    setResult(null);
-    setTxHash(null);
+    runCheck({ chainId: uniswapTx.chainId!, to: uniswapTx.to!, value: uniswapTx.value ?? 0n, data: uniswapTx.data! });
   };
 
   // Manual edits always mean a Sepolia transaction again.

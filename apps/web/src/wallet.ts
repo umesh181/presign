@@ -29,10 +29,13 @@ function isPendingRequest(e: unknown): boolean {
  * Connect the wallet.
  * silent=true: only reuse an existing connection (no popup), used on page load.
  */
-/** Read-only Ethereum mainnet access, for check-only scenarios (token symbols/decimals). Never signs. */
+/**
+ * Read-only Ethereum mainnet access, for check-only scenarios (token symbols/decimals). Never signs.
+ * Default: publicnode, because viem's built-in mainnet RPC rejects browser CORS preflights.
+ */
 export const mainnetReader = createPublicClient({
   chain: mainnet,
-  transport: http(import.meta.env.VITE_MAINNET_RPC_URL || undefined),
+  transport: http(import.meta.env.VITE_MAINNET_RPC_URL || "https://ethereum-rpc.publicnode.com"),
 });
 
 export async function connectWallet(silent = false) {
