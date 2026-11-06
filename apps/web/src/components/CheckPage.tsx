@@ -5,7 +5,7 @@
 import { checkTransaction, type Result, type TxInput } from "@presign/core";
 import { useState } from "react";
 import { encodeFunctionData, getAddress, isAddress, isHex, parseAbi, parseEther, type Hex, type WalletClient } from "viem";
-import { SCENARIOS, txDeps, type ScenarioRun } from "../lib/scenarios.ts";
+import { NETWORKS, SCENARIOS, lookupTx, txDeps, type ScenarioRun } from "../lib/scenarios.ts";
 import { CHAIN, EXPLORER, ensureSepolia } from "../wallet.ts";
 import { External, Shield } from "./icons.tsx";
 import { Verdict } from "./Verdict.tsx";
@@ -36,6 +36,10 @@ export function CheckPage({ wallet, onConnect }: { wallet: Wallet; onConnect: ()
   const [txHash, setTxHash] = useState<Hex | null>(null);
   // The exact transaction PreSign checked: signing uses THIS, never the (possibly edited) form.
   const [checked, setChecked] = useState<TxInput | null>(null);
+
+  // "Already signed?" lookup: explain a past transaction from its hash (read-only).
+  const [hashChain, setHashChain] = useState("1");
+  const [hash, setHash] = useState("");
 
   async function go(id: string, fn: () => Promise<ScenarioRun>) {
     setActive(id);
@@ -73,6 +77,12 @@ export function CheckPage({ wallet, onConnect }: { wallet: Wallet; onConnect: ()
   };
 
   const checkCustom = () => checkTx(to, amount, data);
+
+  const checkHash = () => {
+    const h = hash.trim();
+    if (!/^0x[0-9a-fA-F]{64}$/.test(h)) return setError("A transaction hash is 0x followed by 64 hex characters");
+    go("hash", () => lookupTx(Number(hashChain), h as Hex));
+  };
 
   // One click: fill the form with a real Sepolia WETH call and check it right away.
   const loadWeth = (kind: keyof typeof WETH_ACTIONS) => {
@@ -167,6 +177,20 @@ export function CheckPage({ wallet, onConnect }: { wallet: Wallet; onConnect: ()
             <label className="field"><span>Amount (ETH)</span><input value={amount} onChange={(e) => edit(setAmount, e.target.value)} /></label>
             <label className="field"><span>Data (optional)</span><input value={data} onChange={(e) => edit(setData, e.target.value)} placeholder="0x…" /></label>
             <button className="btn btn-primary" onClick={checkCustom} disabled={busy}>Check with PreSign</button>
+          </div>
+
+          <div className="custom">
+            <div className="wallet-line">
+              <strong style={{ color: "var(--text)" }}>Already signed? Paste a transaction hash</strong>
+            </div>
+            <label className="field">
+              <span>Network</span>
+              <select value={hashChain} onChange={(e) => setHashChain(e.target.value)}>
+                {Object.entries(NETWORKS).map(([id, n]) => <option key={id} value={id}>{n.name}</option>)}
+              </select>
+            </label>
+            <label className="field"><span>Transaction hash</span><input value={hash} onChange={(e) => setHash(e.target.value)} placeholder="0x…" /></label>
+            <button className="btn btn-primary" onClick={checkHash} disabled={busy}>Explain this transaction</button>
           </div>
         </div>
 

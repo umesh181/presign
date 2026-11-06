@@ -49,6 +49,8 @@ export function Verdict(props: {
   note?: string;
   proof?: { label: string; href: string }[];
   actions?: ReactNode;
+  /** Header label: "before you sign" unless the transaction is already on-chain. */
+  when?: string;
 }) {
   const { kind, result: r } = props;
   const fields = (r.details?.fields as FormattedField[] | undefined) ?? [];
@@ -58,7 +60,7 @@ export function Verdict(props: {
     <div className={`card verdict ${r.status}`}>
       <div className="verdict-head">
         <span>PreSign · {kind === "delegation" ? "EIP-7702 delegation" : "Transaction"}</span>
-        <span className="mono">before you sign</span>
+        <span className="mono">{props.when ?? "before you sign"}</span>
       </div>
       <div className={`verdict-body ${r.status}`}>
         <div className="status">
@@ -71,7 +73,7 @@ export function Verdict(props: {
 
         {fields.length > 0 && (
           <div>
-            <div className="block-title">What you are signing</div>
+            <div className="block-title">{props.when ? "What was signed" : "What you are signing"}</div>
             <dl className="kv">
               {fields.map((f) => (
                 <div key={f.label}>

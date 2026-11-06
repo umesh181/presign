@@ -16,7 +16,7 @@ import {
   type TransactionDeps,
   type TxInput,
 } from "@presign/core";
-import { createPublicClient, fallback, http, parseTransaction, type Hex, type PublicClient } from "viem";
+import { TransactionNotFoundError, createPublicClient, fallback, formatEther, getAddress, http, parseTransaction, type Hex, type PublicClient } from "viem";
 import binance from "../../../../fixtures/binance-replay.json";
 import registryTests from "../../../../fixtures/registry/calldata-UniswapV3SwapRouter.tests.json";
 import { PUBLISHER, reader } from "./arkiv.ts";
@@ -27,6 +27,7 @@ import { PUBLISHER, reader } from "./arkiv.ts";
  * Your own RPC (VITE_MAINNET_RPC_URL / VITE_SEPOLIA_RPC_URL) is tried first if set.
  */
 const RPCS: Record<number, (string | undefined)[]> = {
+  ...Object.fromEntries(Object.entries(PUBLIC_RPC).map(([id, url]) => [id, [url]])),
   1: [import.meta.env.VITE_MAINNET_RPC_URL, PUBLIC_RPC[1], "https://1rpc.io/eth", "https://eth.drpc.org", "https://rpc.mevblocker.io"],
   11155111: [import.meta.env.VITE_SEPOLIA_RPC_URL, PUBLIC_RPC[11155111]],
 };
@@ -69,6 +70,7 @@ export interface ScenarioRun {
   request: { label: string; value: string }[];
   chainId: number;
   note?: string;
+  when?: string;
   proof?: { label: string; href: string }[];
 }
 
@@ -90,6 +92,69 @@ const METAMASK_DELEGATOR = "0x63c0c19a282a1B52b07dD5a65b58948A07DAE32B" as const
 const GUARD_DEMO_TX = "0x3e72f880d5b2e8e8d0755b2fddccfdf7306162ba76a13ed4b29a4d02af24987e";
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
+/** Networks the hash lookup supports: name, block explorer, native coin. */
+export const NETWORKS: Record<number, { name: string; explorer: string; coin: string }> = {
+  1: { name: "Ethereum", explorer: "https://etherscan.io", coin: "ETH" },
+  11155111: { name: "Sepolia", explorer: "https://sepolia.etherscan.io", coin: "ETH" },
+  8453: { name: "Base", explorer: "https://basescan.org", coin: "ETH" },
+  42161: { name: "Arbitrum", explorer: "https://arbiscan.io", coin: "ETH" },
+  10: { name: "Optimism", explorer: "https://optimistic.etherscan.io", coin: "ETH" },
+  137: { name: "Polygon", explorer: "https://polygonscan.com", coin: "POL" },
+  56: { name: "BNB Chain", explorer: "https://bscscan.com", coin: "BNB" },
+};
+
+/**
+ * Explain a transaction that was ALREADY signed: read it from the chain by hash, then run the same
+ * check() a signer runs beforehand. EIP-7702 transactions are checked as delegations.
+ */
+export async function lookupTx(chainId: number, hash: Hex): Promise<ScenarioRun> {
+  const net = NETWORKS[chainId];
+  const client = clients[chainId];
+  if (!net || !client) throw new Error(`Unsupported network ${chainId}`);
+  const tx = await client.getTransaction({ hash }).catch((e) => {
+    if (e instanceof TransactionNotFoundError) throw new Error(`Transaction not found on ${net.name}. Is it on another network?`);
+    throw e;
+  });
+  const receipt = await client.getTransactionReceipt({ hash }).catch(() => null);
+  const status = !receipt ? "Pending" : receipt.status === "success" ? "Succeeded" : "Failed (reverted)";
+  const common = {
+    chainId,
+    when: "already signed",
+    note: "Already on-chain: this explains what was signed. PreSign's protection happens before signing.",
+    proof: [{ label: `Transaction on ${net.name} explorer`, href: `${net.explorer}/tx/${hash}` }],
+  };
+
+  if (tx.authorizationList?.length) {
+    const auths = tx.authorizationList.map((a) => ({ chainId: a.chainId, address: a.address, nonce: a.nonce }));
+    return {
+      ...common,
+      kind: "delegation",
+      result: await checkDelegation(auths, delegateDeps),
+      request: [
+        { label: "Sent by", value: short(getAddress(tx.from)) },
+        { label: "Delegate to", value: short(auths[0]!.address) },
+        { label: "Authorizations", value: String(auths.length) },
+        { label: "Status", value: status },
+      ],
+    };
+  }
+  if (!tx.to) throw new Error("This transaction deploys a new contract. PreSign checks calls and delegations.");
+
+  const input: TxInput = { chainId, to: tx.to, value: tx.value, data: tx.input === "0x" ? undefined : tx.input };
+  return {
+    ...common,
+    kind: "transaction",
+    result: await checkTransaction(input, txDeps),
+    request: [
+      { label: "Sent by", value: short(getAddress(tx.from)) },
+      { label: "To", value: getAddress(tx.to) },
+      { label: "Value", value: `${formatEther(tx.value)} ${net.coin}` },
+      ...(input.data ? [{ label: "Data", value: `${input.data.slice(0, 26)}…` }] : []),
+      { label: "Status", value: status },
+    ],
+  };
+}
 
 export const SCENARIOS: Scenario[] = [
   {
