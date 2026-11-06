@@ -55,3 +55,24 @@
 | E | Re-run, nothing changed | extend 41, **0 changes** | idempotent |
 
 The test produced 56 `Change` records (48 added, 7 removed, 1 modified), all `readonly`. Query them with `arkiv.schema = str('presign.change.v1') AND $creator = addr(0xfA4D462E573B30f1B35dDEF3654879EF084e7447)`.
+
+## Reproducibility (from scratch)
+
+On 2026-11-06 we re-ran the whole import the way an organizer would:
+
+1. `git clone https://github.com/umesh181/presign` into an empty folder (no `.env` in the repo), then `npm ci`, `npm run typecheck` (0 errors) and `npm test` (32/32).
+2. A **brand-new publisher wallet** (`0xb8d70b5a05B02B9F97E5c4011571491e7e856441`, funded with 0.7 tGLM) ran `npm run import:descriptors -- --write` (pinned `REGISTRY_COMMIT=ef582c2…`) and `npm run import:delegates -- --write`, configured only through environment variables.
+3. A field-by-field comparison with the original publisher's active entities:
+
+| Dataset | Original | Reproduced | Missing | Extra | Field differences |
+|---|---|---|---|---|---|
+| Descriptors (`descriptorHash, attested, protocolOwner, sourceRepo, sourcePath, sourceCommit`) | 1,917 | 1,917 | 0 | 0 | **0** |
+| Delegates (`codeHash, vendor, contractName, sourceRepo, sourcePath, sourceCommit`) | 41 | 41 | 0 | 0 | **0** |
+
+The network was flaky during the run (RPC and GitHub timeouts). It surfaced two fixes, now in the repo:
+- read retries with back-off
+- resume-safe writes: after an error, re-read Arkiv and continue
+
+One failed attempt had actually landed 100 entities before its timeout. The resume skipped them, and the final count was exactly 1,917, with no duplicates.
+
+The keeper then re-confirmed the original publisher's data: all 1,958 entities extended to 7.00 days, matching their sources exactly.
