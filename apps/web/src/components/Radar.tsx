@@ -36,9 +36,13 @@ export function Radar() {
     return () => clearInterval(t);
   }, []);
 
+  // The table follows the Watchtower: re-read Arkiv every 30 s (keeps the current rows while loading).
   useEffect(() => {
     setProfiles(null);
-    listProfiles(chainId).then(setProfiles).catch((e) => setError(String(e)));
+    const load = () => listProfiles(chainId).then(setProfiles).catch((e) => setError(String(e)));
+    load();
+    const t = setInterval(load, 30_000);
+    return () => clearInterval(t);
   }, [chainId]);
 
   async function go(fn: () => Promise<ScenarioRun | null>, none?: string) {
