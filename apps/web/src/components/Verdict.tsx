@@ -12,19 +12,8 @@ function steps(kind: Kind, r: Result): Step[] {
   const d = r.details ?? {};
   // Delegation Radar: check() returns its evidence line by line.
   if (r.evidence?.length) return r.evidence.map((e) => ({ state: e.state, text: e.text }));
-  if (kind === "delegation") {
-    if (r.reason.startsWith("Removes the delegation")) return [{ state: "ok", text: "Revocation: restores a plain wallet" }];
-    if (r.reason.startsWith("Hands your entire account")) return [{ state: "fail", text: "Delegate is not on any vendor allowlist on Arkiv" }];
-    if (r.reason.startsWith("Contract code differs"))
-      return [
-        { state: "ok", text: "Delegate found on the vendor allowlist (Arkiv)" },
-        { state: "fail", text: "Live on-chain code does NOT match the stored fingerprint" },
-      ];
-    return [
-      { state: "ok", text: `On ${String(d.vendor ?? "vendor")}'s official allowlist, proven in its own repo (Arkiv)` },
-      { state: "ok", text: "Live on-chain code matches the stored code fingerprint" },
-    ];
-  }
+  // A delegation with no evidence lines is a pure revocation (delegating to the zero address).
+  if (kind === "delegation") return [{ state: "ok", text: "Revocation: restores a plain wallet" }];
   if (d.kind === "nativeTransfer") return [{ state: "ok", text: "Plain ETH transfer to a wallet: no hidden contract call" }];
   if (r.reason.startsWith("No verified translation")) return [{ state: "fail", text: "No verified ERC-7730 translation on Arkiv for this contract" }];
   if (r.reason.startsWith("Translation file tampered"))

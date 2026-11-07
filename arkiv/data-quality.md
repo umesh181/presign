@@ -6,7 +6,7 @@
 
 | Question | Answer |
 |---|---|
-| **Complete?** | All **1,917** calldata deployments in the EF registry's `index.calldata.json` (614 descriptor files, **143 chains**) at a pinned commit, `includes` resolved. Plus an EIP-7702 allowlist of **41** entries: 6 vendors × 7 chains (OKX isn't deployed on Sepolia). Not yet mirrored: EIP-712 descriptors (see gaps below) |
+| **Complete?** | All **1,917** calldata deployments in the EF registry's `index.calldata.json` (614 descriptor files, **143 chains**) at a pinned commit, `includes` resolved. Plus **41** vendor-listed EIP-7702 delegates: 6 vendors × 7 chains (OKX isn't deployed on Sepolia). Plus the Radar's own data: a profile for every delegate the Watchtower has seen, and 16 known drainer code families. Not yet mirrored: EIP-712 descriptors (see gaps below) |
 | **Correct?** | Every descriptor carries its ERC-8176 fingerprint, which readers recompute client-side. **166/169** auditor attestations match (signer recovered = Cyfrin). Every delegate address is proven present in the vendor's own file, with each chain's exact code hash |
 | **Current?** | Every entity expires in 7 days. The keeper re-reads the sources (latest registry commit, vendor files, on-chain code), extends what still matches, and immediately marks changed or removed entries, with a `readonly` `Change` record. Last run: 2026-11-06, all 1,958 entities matched and were extended |
 | **Filterable the way people search?** | Signers look up "this contract on this chain": indexed `chainId` + `address` + `status` (+ `attested`, `vendor`, `codeHash`, `sourceCommit`), always pinned to `$creator = publisher`. One query, no API key (see README) |
@@ -28,12 +28,25 @@
 
   PreSign imports these with `attested = false`. Stale trust is exactly what we're built to catch.
 
-**EIP-7702 delegate allowlist** (`npm run import:delegates`, 2026-11-06): 41 entities, 6 vendors, 7 chains (1, 10, 56, 137, 8453, 42161, 11155111).
+**Vendor-listed EIP-7702 delegates** (`npm run import:delegates`, 2026-11-06): 41 entities, 6 vendors, 7 chains (1, 10, 56, 137, 8453, 42161, 11155111).
 
 - Each vendor's address is **proven present** in its official source file at the file's latest commit (GitHub API + raw file), not assumed.
 - **Stale source caught:** OKX changed its published `SmartWalletEntry` on 2026-10-09 (`okxlabs/okx-smart-wallet-evm@455dba8`). The importer refused our old address (`0xe40c…6fA4`) as "no longer listed"; after review we switched to the current `0xcEF0…4743`.
 - **Same contract across chains:** a chain is accepted only if its code equals mainnet's, or differs only in chain-specific immutables (same length, ≤64 differing bytes). MetaMask's and ZeroDev's delegators differ per chain in exactly 35 bytes: the chain id and the cached EIP-712 domain separator. Each chain stores its own exact `codeHash`, and `check()` compares live code against it.
 - OKX has no deployment on Sepolia, so it has 6 chains, not 7.
+
+## Delegation Radar data
+
+The Radar publishes **new** data (not a copy): evidence about EIP-7702 delegate contracts, observed on-chain by the Watchtower (`npm run watchtower`).
+
+| Question | Answer |
+|---|---|
+| **What's covered?** | Every delegate seen in the scanned blocks (first run: the latest 300 Ethereum mainnet blocks, about an hour: 1,976 authorizations to 63 delegates; plus Sepolia) and every vendor-listed delegate on all 7 chains. 120+ profiles at the time of writing; `--watch` keeps adding new ones |
+| **Correct?** | Each profile is recomputed from the chain: runtime code, code family, dependencies and their current implementation (EIP-1967 slots, beacon `implementation()`), authorities recovered from each signed authorization |
+| **Known drainers** | 28 contracts from published research (27 CrimeEnjoyor deployments catalogued by nullteilerfrei/Wintermute, GoPlus's 7702 phishing delegator) → **16** code families. Validation: clones that differ only in the hardcoded attacker address share a family; **none** of the vendor contracts matches any drainer family; "upgradeable" was flagged on none of the 40 real vendor/mainnet contracts we tested, and on our beacon-backed demo delegate |
+| **Live finding** | `0x84D05511614272694D3a9cebE896514DBDE51F40` (mainnet) matched the CrimeEnjoyor v1 family. We confirmed it independently: its 1,042-byte runtime code is identical to the published `0x89383882…e704`, at an address that is not in the source list |
+| **Current?** | Profiles expire after 7 days unless the Watchtower re-checks them; alerts are `readonly` and live 30 days. A logic change raises an alert within one Watchtower cycle (seconds with `--watch`) |
+| **Limits** | "Accounts" counts what the Watchtower has scanned, not all history. "First seen" means first seen by the Watchtower, not deployment time. Upgradeability detection covers EIP-1967 proxies and beacons (`implementation()` + `upgradeTo()`), not every possible indirection. A code-family match is strong evidence; *no* match is not proof of safety, so unknown contracts get **caution**, not **verified** |
 
 ## Known coverage gaps
 
@@ -49,7 +62,7 @@
 | Step | Simulated event | Keeper result | Verified |
 |---|---|---|---|
 | A | First run | added 41 | 41 active, match sources |
-| B | Vendor drops Alchemy from its list | removed 7 (marked `removed` immediately), extended 34 | `check()` now **blocks** Alchemy and still trusts MetaMask |
+| B | Vendor drops Alchemy from its list | removed 7 (marked `removed` immediately), extended 34 | `check()` stopped trusting Alchemy and still trusts MetaMask (at the time: **blocked**; since the Radar, a contract that loses its vendor listing gets **caution** unless other evidence blocks it) |
 | C | One stored code hash corrupted (Coinbase, chain 1) | modified 1: new correct entity, old one `superseded` | 34 active, match sources |
 | D | Alchemy listed again | added 7 | 41 active, match sources |
 | E | Re-run, nothing changed | extend 41, **0 changes** | idempotent |

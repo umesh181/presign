@@ -36,7 +36,7 @@ The question it answers is not *"who claims to be trusted?"* (a list someone can
 |---|---|---|
 | EF clear-signing registry (GitHub) | Clone or download the repo, parse `index.calldata.json`, resolve `includes` yourself, trust GitHub to be up and unblocked | One query by `chainId` + `address` returns the **resolved** descriptor, its **ERC-8176 fingerprint**, and whether a **verified auditor signature** matches it |
 | Auditor attestations (`registry/*/sigs`) | You must recover each EAS signer and re-hash each descriptor yourself | `attested = true` only where we recovered Cyfrin's signer **and** the hash matched (166/169 match; 3 stale ones flagged) |
-| EIP-7702 delegate addresses | Scattered across 6 vendor repos in different formats, with no shared list. Addresses go stale (OKX changed theirs on 2026-10-09) | **One** queryable allowlist: 41 entries, 7 chains, each address proven present in the vendor's own file, each with a per-chain code hash re-checked at signing time |
+| EIP-7702 delegate addresses | Scattered across 6 vendor repos in different formats, with no shared list. Addresses go stale (OKX changed theirs on 2026-10-09) | **One** queryable vendor list: 41 entries, 7 chains, each address proven present in the vendor's own file, each with a per-chain code hash re-checked at signing time |
 | History | Git history exists only for the registry; vendor address changes are invisible | `Change` entities: "what trusted entries changed in the last 24h?" is one query |
 
 ## Why not the alternatives?

@@ -18,6 +18,5 @@ export function codeHash(runtimeBytecode: Hex): Hex {
   return keccak256(runtimeBytecode);
 }
 
-// TODO(A): resolveIncludes(descriptor, readFile) — merge `includes` per ERC-7730
-// (including file wins; `fields` merge by `path`). Then verify one hash against
-// registry/*/sigs/*.json (Cyfrin attestation) before importing everything.
+// `includes` are resolved before hashing in ./includes.ts (a port of the registry's own resolver);
+// `npm run verify:registry` checks the result against the Cyfrin attestations (166/169 match).

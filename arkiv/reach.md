@@ -29,14 +29,16 @@ The legitimate delegate contracts we mirror belong to the wallets most users alr
 
 | User | Use | Why our copy rather than the source |
 |---|---|---|
-| **Exchange & custody signing systems** | Signer Guard: refuse delegations to unknown contracts and calls with no verified translation | They sign with no human watching. The Binance case. A machine-readable allowlist with live code-hash checks is exactly what was missing |
-| **Wallets** (browser, mobile) | Show verified plain English before signing; warn on unknown 7702 delegates | One query by chain + address, no GitHub dependency, fingerprint + auditor status precomputed, and a 7702 allowlist that doesn't exist elsewhere |
+| **Exchange & custody signing systems** | Signer Guard: refuse delegations that aren't verified and calls with no verified translation | They sign with no human watching. The Binance case: 50 pre-signed authorizations to an unknown contract would have been refused |
+| **Wallets** (browser, mobile) | Show verified plain English before signing; show the Radar's evidence before an EIP-7702 delegation; tell users whose current delegate has an alert to revoke | One query by chain + address, no GitHub dependency, fingerprint + auditor status precomputed, and delegate evidence (drainer families, upgradeability, logic-change alerts) that doesn't exist anywhere else |
 | **Hardware wallet companion apps** | Fetch descriptors when GitHub is blocked or down | Always-available, verifiable mirror |
 | **AI agents with wallets** | "Check before I sign" via `check()` | Deterministic, machine-readable answers |
-| **Security teams** | Watch the `Change` feed: "which trusted entries changed in the last 24h?" | Early warning for registry poisoning or vendor address changes (we already caught OKX's change) |
+| **Security teams** | Watch the `Change` feed and Radar alerts: "which trusted entries changed, and which delegates swapped their logic or match drainer code?" | Early warning for registry poisoning, vendor address changes (we already caught OKX's change) and drainer clones (the Radar found one live on mainnet) |
+| **Other watchers** | Publish their own `presign.radar.v1` / `presign.alert.v1` evidence under their own address | Evidence is pinned to its creator, so a wallet can require several independent watchers to agree: no single gatekeeper |
 | **Protocol teams** | Confirm their descriptor is mirrored correctly and see its audit status | Public, queryable view of their entry |
 
 ## How someone starts using it
 - **No integration at all:** run the `curl` query in the README.
-- **TypeScript:** `@presign/core` → `checkTransaction()` / `checkDelegation()`, reading Arkiv with `createdBy(PUBLISHER)`.
+- **TypeScript:** `@presign/core` → `checkTransaction()` / `checkDelegation()` with `delegateDepsFor(reader, PUBLISHER, clients)`, reading Arkiv with `createdBy(PUBLISHER)`.
+- **Web:** the PreSign web app (`npm run web`): check a transaction before signing, explain a transaction hash, check whether an account's delegation is exposed.
 - **Automated signers:** `@presign/guard` → `guardedDelegate()` refuses unsafe delegations (`npm run guard:demo` shows it on Sepolia).

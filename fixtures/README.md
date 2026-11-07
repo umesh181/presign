@@ -2,11 +2,11 @@
 
 Read-only demo inputs. **Nothing here is ever broadcast.**
 
-| File | Scenario | Expected |
+| File | Used by | Expected |
 |---|---|---|
-| `binance-replay.json` | Real Oct 29, 2026 delegation of "Binance 14" to a sweeper | 🛑 blocked |
-| `metamask-delegation.json` (TODO) | Delegation to MetaMask's official delegator | ✅ trusted |
-| `uniswap-swap.json` (TODO) | Uniswap V3 SwapRouter `exactInputSingle` (`0x414bf389`) | ✅ readable |
+| `binance-replay.json` | Web app "Binance hot-wallet delegation", Signer Guard demo step 3, `check.test.ts` | 🛑 blocked (50 authorizations in one transaction, delegate not vendor-listed) |
+| `registry/calldata-UniswapV3SwapRouter*.json` | Web app "Uniswap swap" + "Tampered translation", formatter tests | ✅ verified / 🛑 blocked when one character is altered |
 
-The values in `binance-replay.json` were checked against Etherscan on 2026-11-05.
-The full `authorizationList` should be fetched with `eth_getTransactionByHash` and committed here.
+`binance-replay.json` is the real Oct 29, 2026 delegation of "Binance 14" (mainnet tx `0xad99…298b`), including its full 50-entry `authorizationList` copied from `eth_getTransactionByHash` and checked against Etherscan on 2026-11-05.
+
+The MetaMask scenario needs no fixture: it is checked live against Sepolia and Arkiv.

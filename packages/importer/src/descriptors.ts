@@ -9,7 +9,7 @@
  * 3. Resolve `includes`, compute the ERC-8176 descriptorHash.
  * 4. attested = a sig file signed by a trusted auditor carries exactly this hash.
  * 5. Validate Arkiv limits (str <= 128 bytes, bytes <= 128 KiB per create).
- * 6. (--write) batch-write to Arkiv. TODO once the publisher wallet is set up.
+ * 6. (--write) batch-write to Arkiv: resume-safe, skips unchanged entries, supersedes changed ones.
  *
  * Run: npm run import:descriptors            (dry run: build + validate, no writes)
  *      npm run import:descriptors -- --write (writes to Arkiv; needs .env)

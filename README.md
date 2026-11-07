@@ -1,32 +1,37 @@
 # PreSign
 
-**Verified pre-signing checks, mirrored on Arkiv.**
+**The checkpoint before every signature: plain English for what you sign, evidence for who you trust. Public on [Arkiv](https://arkiv.network).**
 
-PreSign puts the two lists every signer should check onto [Arkiv](https://arkiv.network):
+PreSign answers two questions before anything is signed:
 
-1. **ERC-7730 clear-signing descriptors**: turn transaction hex into plain English. Mirrored from the Ethereum Foundation registry.
-2. **A trusted EIP-7702 delegate allowlist**: official delegate contracts published by wallet vendors (MetaMask, Coinbase, Uniswap, OKX, ZeroDev, Alchemy), with on-chain code fingerprints.
+1. **"What does this do?"** We mirror the Ethereum Foundation's **ERC-7730 clear-signing registry** to Arkiv (1,917 contracts, 143 chains), with a fingerprint per file that every reader re-computes. Raw calldata becomes *"Swap 0.551 WETH for at least 0 DACITY"*; a tampered translation is blocked.
+2. **"Who am I handing my account to?"** (EIP-7702) The **Delegation Radar** doesn't ask who a contract *claims* to be. A Watchtower reads every delegation on-chain and publishes **evidence** about each delegate contract to Arkiv: same code as a known drainer, upgradeable logic, logic changed since first seen (a `readonly` alert nobody can delete), vendor listing, age and adoption. The wallet vendors' own delegate lists (MetaMask, Coinbase, Uniswap, OKX, ZeroDev, Alchemy) are mirrored too, as one signal among several.
 
-Before anything is signed, `check()` answers *"what does this do?"* and *"who am I handing my account to?"*, and returns `trusted`, `blocked` or `unknown`. Every entry is verified against tampering, and trust expires unless it is re-confirmed.
+`check()` turns this into the verdict a wallet, dApp, exchange or AI agent shows: **verified**, **caution** or **blocked**, with the evidence behind it. The **Signer Guard** refuses to sign anything that isn't verified.
 
 > Built at ETHGlobal Mumbai 2026 for the Arkiv track *"Mirror something Ethereum depends on"*.
 
 ## Status
 
-Working on Arkiv's Rabdi testnet: **1,917** clear-signing descriptors and **41** vendor-listed EIP-7702 delegates are live and kept fresh by the keeper. The **Delegation Radar** has published **107** delegate profiles (63 delegates seen on Ethereum mainnet in one hour, 1,976 authorizations; vendor delegates on 7 chains; Sepolia), **16** known drainer code families, and its first alerts, including a live mainnet delegate whose code is byte-for-byte the published CrimeEnjoyor v1 drainer (`0x84d05511…1f40`, not in the source list). The checker, ERC-7730 formatter, Signer Guard and the Radar demo all run real transactions on Sepolia. Hackathon build.
+Working on Arkiv's Rabdi testnet (hackathon build):
+
+- **1,917** clear-signing descriptors and **41** vendor-listed EIP-7702 delegates, kept fresh by the keeper (7-day expiry, re-extended only while sources match).
+- **Delegation Radar:** 120+ delegate profiles (our first one-hour mainnet scan saw 1,976 authorizations to 63 delegates; plus vendor delegates on 7 chains and Sepolia), **16** known drainer code families, and alerts. One is a **live mainnet delegate whose bytecode is byte-for-byte the published CrimeEnjoyor v1 drainer** (`0x84d05511…1f40`), at an address not in any published list.
+- Real transactions on Sepolia for the web app (MetaMask), the Signer Guard and the Radar demo. 46 tests; CI runs typecheck + tests.
+- Reproducible: a fresh clone with a brand-new publisher rebuilt the mirror field-for-field identical ([arkiv/data-quality.md](arkiv/data-quality.md#reproducibility)).
 
 ## Repo layout
 
 | Path | What |
 |---|---|
-| `packages/core` | Shared library: Arkiv schemas + reader, fingerprints, `check()`, ERC-7730 formatter |
+| `packages/core` | Shared library: Arkiv schemas + reader, fingerprints, `check()`, ERC-7730 formatter, bytecode code families, delegate inspection |
 | `packages/importer` | Re-runnable importers: descriptors (EF registry) and delegates (`sources/delegates.json`) |
 | `packages/keeper` | Daily re-sync: extend unchanged entries, let removed ones expire, write change records |
 | `packages/watchtower` | Delegation Radar: observes EIP-7702 delegations, inspects each delegate, publishes evidence and alerts to Arkiv |
 | `contracts/radar-demo` | Sepolia demo contracts for the Radar (beacon-backed delegate, harmless logic, drainer) |
-| `packages/guard` | Signer Guard: refuses to sign when `check()` says blocked |
-| `apps/web` | Web app: Check (before signing), Radar (delegate evidence + live alerts), Explorer |
-| `sources/` | Vendor delegate sources (official repos only) |
+| `packages/guard` | Signer Guard: refuses to sign unless `check()` says verified |
+| `apps/web` | Landing page + web app: Check (before signing, MetaMask on Sepolia, explain a tx hash), Radar (delegate evidence + live alerts), Explorer |
+| `sources/` | Vendor delegate sources (official repos only) and known drainers (`known-bad.json`, published research only) |
 | `fixtures/` | Read-only demo inputs (Binance replay, …) |
 | `arkiv/` | Required judging docs |
 
@@ -51,6 +56,9 @@ Get an Arkiv access key at https://hub.arkiv.network/access-keys and testnet tGL
 | `npm run keeper` | Re-sync and extend expiry |
 | `npm run watchtower` | Delegation Radar: scan EIP-7702 delegations, publish evidence + alerts (`--write`, `--watch`, `--seed`) |
 | `npm run radar:demo` | Live Sepolia demo: a delegate's logic is swapped to a drainer → alert on Arkiv → PreSign blocks |
+| `npm run guard:demo` | Signer Guard on Sepolia: approves MetaMask's delegator, refuses unknown and Binance-style delegations |
+| `npm run verify:registry` | Re-check every auditor attestation against our fingerprints |
+| `npm run web` | Landing page + web app on http://localhost:5173 (app at `/#/app`) |
 | `npm run typecheck` / `npm test` | Checks (also run in CI) |
 
 ## Arkiv details (required)
@@ -63,8 +71,12 @@ Get an Arkiv access key at https://hub.arkiv.network/access-keys and testnet tGL
 
 | Dataset | Entities | Source |
 |---|---|---|
-| ERC-7730 clear-signing descriptors | **1,917** (one per chainId + contract, 143 chains, 614 descriptor files) | EF registry @ `ef582c2f03bfbd062b7e3889b55dd3b45c3d5494` |
+| ERC-7730 clear-signing descriptors (`presign.descriptor.v1`) | **1,917** (one per chainId + contract, 143 chains, 614 descriptor files) | EF registry @ `ef582c2f03bfbd062b7e3889b55dd3b45c3d5494` |
 | …of which attested by an auditor (Cyfrin, signature verified) | **201** | `registry/*/sigs/*.json` |
+| Vendor-listed EIP-7702 delegates (`presign.delegate.v1`) | **41** (6 vendors × 7 chains) | Vendor repos in `sources/delegates.json` |
+| Delegate profiles (`presign.radar.v1`) | **120+** and growing | Watchtower: on-chain authorizations + bytecode inspection |
+| Known drainer code families (`presign.badfamily.v1`) | **16** (from 28 published contracts) | `sources/known-bad.json` |
+| Watchtower alerts (`presign.alert.v1`, readonly) | live count on the landing page | Watchtower |
 
 ### Run one query yourself (no PreSign server; key optional)
 
@@ -82,11 +94,20 @@ Arkiv's public endpoint gives each IP a small anonymous query budget. If you see
 
 It returns entity [`0x76028dc5…9572`](https://rabdi.explorer.arkiv.network/entity/0x76028dc5a3cb1ad09b0946f175a541e6f262c6903eb86ed667860dc8eb9d9572) with owner `Uniswap Labs`, its fingerprint, and the exact registry file and commit it came from. Add `"descriptor":true` to `attributes` to get the full descriptor JSON (gzip-compressed).
 
-**EIP-7702 trusted delegates:** **41** entities: 6 vendors (MetaMask, Coinbase, Uniswap, OKX, ZeroDev, Alchemy) across 7 chains, each with its per-chain code hash. Query them with `arkiv.schema = str('presign.delegate.v1') AND $creator = addr(0x1784A22855d5E482112F94d2169c28bC7e6aF885)`.
+**Vendor-listed EIP-7702 delegates:** **41** entities: 6 vendors (MetaMask, Coinbase, Uniswap, OKX, ZeroDev, Alchemy) across 7 chains, each with its per-chain code hash. Query them with `arkiv.schema = str('presign.delegate.v1') AND $creator = addr(0x1784A22855d5E482112F94d2169c28bC7e6aF885)`. Radar alerts: `arkiv.schema = str('presign.alert.v1') AND $creator = addr(0x1784A22855d5E482112F94d2169c28bC7e6aF885)`.
+
+### Web app
+
+`npm run web`, then open http://localhost:5173. Every number and verdict is read live from Arkiv in the browser; there is no PreSign server.
+
+- **Landing page** (`/`): what PreSign does, with live counts from Arkiv.
+- **Check** (`/#/app`): demo scenarios (Uniswap swap ✅, Binance delegation 🛑, MetaMask smart account ✅, tampered translation 🛑); **Wrap/Unwrap WETH on Sepolia**, where PreSign shows the plain English *before* MetaMask opens and then signs exactly the checked transaction; and **"Already signed? Paste a transaction hash"**, which explains any transaction on 7 networks.
+- **Radar** (`/#/app/radar`): live alerts, "Is my account exposed?" (reads an account's current EIP-7702 delegation), and every delegate the Watchtower has seen, each with a Check button.
+- **Explorer**: what PreSign holds on Arkiv for any contract, with the fingerprint re-computed in your browser and a copyable query.
 
 ### Delegation Radar (evidence, not a guest list)
 
-A vendor allowlist only answers *"is this contract famous?"*. The Radar answers *"what is it, and has it changed?"*, from on-chain evidence anyone can recompute:
+A vendor list only answers *"is this contract famous?"* (in our one-hour mainnet sample, ~9 in 10 delegations went to contracts no vendor lists). And a list can be lobbied onto, or keep vouching for a contract that later changes. The Radar answers *"what is it, and has it changed?"*, from on-chain evidence anyone can recompute:
 
 - **Code family vs known drainers**: runtime code with metadata stripped and every 20/32-byte constant blanked, so sweeper clones that differ only in the attacker address match. Seeded from published research (`sources/known-bad.json`: 27 CrimeEnjoyor contracts catalogued by nullteilerfrei/Wintermute + GoPlus's 7702 phishing delegator → 16 families). Checked against our vendor contracts: no false matches.
 - **Upgradeable logic**: DELEGATECALL **plus** a dependency that's an EIP-1967 proxy or a beacon (`implementation()` + `upgradeTo()`). DELEGATECALL alone isn't flagged: vendor contracts use it with logic chosen by the account itself.
@@ -98,7 +119,7 @@ A vendor allowlist only answers *"is this contract famous?"*. The Radar answers 
 ```bash
 npm run watchtower -- --seed --write          # publish known drainer families + profile recent delegates
 npm run watchtower -- --watch --write         # keep watching; alert on logic changes
-npm run radar:demo                            # live Sepolia demo (below)
+npm run radar:demo                            # live Sepolia demo (below); --keep-delegation / --revoke
 ```
 
 **Live demo (`npm run radar:demo`, real Sepolia transactions):**
@@ -159,11 +180,12 @@ No Sourcify data, APIs or CDNs are used.
 We built PreSign with **Claude Code** (Anthropic, model Claude Opus 5.5) as a pair programmer. Commits it helped write carry a `Co-Authored-By: Claude` trailer.
 
 - **Research:** reading the Arkiv docs and SDK types, ERC-7730 / ERC-8176, the EF registry layout, vendor EIP-7702 repos, and verifying the Binance transaction on Etherscan. Facts the AI found were re-checked against primary sources: SDK `.d.ts` files, raw JSON-RPC calls, GitHub files at pinned commits.
-- **Code:** importers, keeper, `check()`, the ERC-7730 formatter, Signer Guard and the web app were written with AI assistance, with the team directing design decisions.
+- **Code:** importers, keeper, `check()`, the ERC-7730 formatter, Signer Guard, the Watchtower / Delegation Radar and the web app (including the landing page) were written with AI assistance, with the team directing design decisions. The Radar redesign came from judge feedback during the event.
 - **How we kept it honest:**
   - the formatter is tested against the registry's **own** expected outputs for 11 real mainnet transactions
   - the keeper's change paths were exercised **live on Arkiv** with a throwaway publisher
-  - Signer Guard sent **real** Sepolia transactions
+  - Signer Guard, the web app and the Radar demo sent **real** Sepolia transactions
+  - the drainer code-family check was validated on 28 published drainer contracts and every vendor contract (no false matches); the live mainnet match was confirmed byte-for-byte
   - every number in this README and in `arkiv/*.md` was re-measured (Arkiv count queries, GitHub API, explorer)
 - **Decisions are deterministic:** PreSign itself uses **no AI** at signing time. Every verdict comes from verified data and fixed rules.
 - **Planning:** a planning document (no code) was written before the event; all code in this repo was written during ETHGlobal Mumbai.
