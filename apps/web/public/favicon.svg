@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Same mark as the header logo (.m-mark / .brand-mark): white tile, dark shield -->
+  <rect width="24" height="24" rx="6.5" fill="#ededf2"/>
+  <g transform="translate(4.3 4.3) scale(0.64)" fill="none" stroke="#08090c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z"/>
+    <path d="M9 12l2 2 4-4"/>
+  </g>
+</svg>
