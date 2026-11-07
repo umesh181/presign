@@ -43,7 +43,7 @@ export function AppPage() {
       <header className="header">
         <div className="container">
           <a className="brand" href="#/" title="Back to the PreSign homepage">
-            <span className="brand-mark"><Shield size={18} /></span>
+            <span className="brand-mark"><Shield size={14} /></span>
             PreSign
           </a>
           <nav className="nav">
