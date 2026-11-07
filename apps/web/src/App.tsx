@@ -9,6 +9,25 @@ import { connectWallet } from "./wallet.ts";
 
 type Page = "check" | "radar" | "explorer";
 
+// Each page gets its own hero; the live numbers below it stay the same.
+const HERO: Record<Page, { eyebrow: string; title: [string, string]; text: string }> = {
+  check: {
+    eyebrow: "The checkpoint before every signature",
+    title: ["Know what you sign.", "Know who you trust."],
+    text: "Pick a transaction or an EIP-7702 delegation, or paste a transaction hash. PreSign checks it against data on Arkiv and explains it in plain English, before your wallet pops up.",
+  },
+  radar: {
+    eyebrow: "Delegation Radar",
+    title: ["Every 7702 delegate,", "judged by evidence."],
+    text: "The Watchtower watches EIP-7702 delegations on-chain and publishes what it finds to Arkiv: drainer code, upgradeable logic, code changes, and alerts that can't be deleted.",
+  },
+  explorer: {
+    eyebrow: "Registry Explorer",
+    title: ["Look it up yourself.", "Straight from Arkiv."],
+    text: "Search any contract by chain and address to see its clear-signing translation or its delegate record, with where the data came from and who published it. No PreSign server in between.",
+  },
+};
+
 export function AppPage() {
   // Deep links: #/app/radar, #/app/explorer
   const [page, setPage] = useState<Page>(() => (location.hash.includes("radar") ? "radar" : location.hash.includes("explorer") ? "explorer" : "check"));
@@ -66,16 +85,15 @@ export function AppPage() {
 
       <main className="container">
         <section className="hero">
-          <div className="eyebrow"><Shield size={15} /> The checkpoint before every signature</div>
-          <h1>
-            Know <em>what you sign</em>.<br />
-            Know <em>who you trust</em>.
-          </h1>
-          <p>
-            PreSign mirrors Ethereum's clear-signing translations onto Arkiv and watches every EIP-7702 delegate contract
-            on-chain, publishing the evidence (drainer code, upgradeable logic, logic changes) for any wallet to check before
-            a signature.
-          </p>
+          {/* key={page}: remount on tab switch so the fade-up replays */}
+          <div key={page} className="hero-anim">
+            <div className="eyebrow"><Shield size={15} /> {HERO[page].eyebrow}</div>
+            <h1>
+              {HERO[page].title[0]}<br />
+              {HERO[page].title[1]}
+            </h1>
+            <p>{HERO[page].text}</p>
+          </div>
           <div className="stats">
             <div className="stat"><b>{fmt(stats?.descriptors)}</b><span>Clear-signing translations</span><small>EF registry · {fmt(stats?.attested)} audited by Cyfrin</small></div>
             <div className="stat"><b>{fmt(radar?.profiles)}</b><span>7702 delegates watched</span><small>evidence from the chain · {fmt(stats?.delegates)} vendor-listed</small></div>
