@@ -274,3 +274,8 @@ button.chip { cursor: pointer; font-family: inherit; }
   .app-shell .header .container { display: flex; }
   .app-shell .header-right { margin-left: auto; }
 }
+
+/* footer links (same set as the landing nav) */
+.footer-links { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.footer-links a { color: var(--muted); }
+.footer-links a:hover { color: var(--text); text-decoration: none; }

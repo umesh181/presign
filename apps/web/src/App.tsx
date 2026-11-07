@@ -91,10 +91,12 @@ export function AppPage() {
       <footer className="footer">
         <div className="container">
           <span>PreSign · built at ETHGlobal Mumbai 2026 on Arkiv</span>
-          <span>
-            Publisher <a className="mono" href={`${ARKIV_EXPLORER}/address/${PUBLISHER}`} target="_blank" rel="noreferrer">{PUBLISHER.slice(0, 10)}… <External /></a>
-            {" · "}
+          <span className="footer-links">
+            <a href="#/how">How it works</a>
+            <a href="#/radar">Radar</a>
+            <a href="#/arkiv">Why Arkiv</a>
             <a href="https://github.com/umesh181/presign" target="_blank" rel="noreferrer">GitHub <External /></a>
+            <a className="mono" href={`${ARKIV_EXPLORER}/address/${PUBLISHER}`} target="_blank" rel="noreferrer">Publisher {PUBLISHER.slice(0, 10)}… <External /></a>
           </span>
         </div>
       </footer>

@@ -132,6 +132,12 @@ export function Landing({ onLaunch }: { onLaunch: () => void }) {
 
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
+  // Deep links from the app footer: #/how, #/radar, #/arkiv
+  useEffect(() => {
+    const id = location.hash.replace("#/", "");
+    if (["how", "radar", "arkiv"].includes(id)) setTimeout(() => go(id), 100);
+  }, []);
+
   return (
     <div className="M">
       <header className="m-nav">
@@ -296,6 +302,9 @@ export function Landing({ onLaunch }: { onLaunch: () => void }) {
       <footer className="m-wrap m-foot">
         <span>PreSign · ETHGlobal Mumbai 2026 · built on Arkiv</span>
         <span>
+          <button onClick={() => go("how")}>How it works</button>
+          <button onClick={() => go("radar")}>Radar</button>
+          <button onClick={() => go("arkiv")}>Why Arkiv</button>
           <a href={GITHUB} target="_blank" rel="noreferrer">GitHub</a>
           <a href={`${ARKIV_EXPLORER}/address/${PUBLISHER}`} target="_blank" rel="noreferrer">Publisher on Arkiv</a>
         </span>
